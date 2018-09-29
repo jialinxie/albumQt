@@ -14,6 +14,7 @@
 #include <QGesture>
 #include <QGestureEvent>
 #include <QtMath>
+#include <QCheckBox>
 
 #define picViewSize 78
 
@@ -64,11 +65,23 @@ ImageWidget::ImageWidget(QWidget *parent)
     QScrollBar *scrollBar = pListShow->verticalScrollBar();
     pListShow->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     pListShow->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+
+    pListShow->checkboxList = new QList<QCheckBox*>;
+    pListShow->checkboxList->clear();
+
     // 创建单元项
-    for (int i = 0; i<m_imgList.count(); ++i) {
+    for (int i = 0; i < m_imgList.count(); ++i) {
         QPixmap pixmap(m_strPath + "/" + m_imgList.at(i));
         QListWidgetItem *listWidgetItem = new QListWidgetItem(QIcon(pixmap.scaled(IMAGE_SIZE)), NULL);  //delete name display
         listWidgetItem->setSizeHint(ITEM_SIZE);
+
+        QCheckBox *checkbox = new QCheckBox(pListShow);
+        checkbox->setCheckState(Qt::Unchecked);
+        checkbox->setGeometry(listWidgetItem->sizeHint().width() * (i % 3 + 1) - 27, listWidgetItem->sizeHint().height() * (i / 3) - 4, 35, 35);
+        checkbox->setStyleSheet("QCheckBox::indicator { width:35px; height: 35px;} QCheckBox::indicator::checked {image: url(:/checkboxYes.png);}QCheckBox::indicator::unchecked {image: url(:/checkboxNo.png);}");
+        pListShow->checkboxList->append(checkbox);
+        pListShow->setItemWidget(listWidgetItem,  checkbox);
+
         pListShow->insertItem(i, listWidgetItem);
     }
 
@@ -337,10 +350,6 @@ void ImageWidget::zoomIn()
 
 }
 
-//void QListWidget::mouseMoveEvent(QMouseEvent *e){
-//    qDebug() << "test";
-//}
-
 void ImageWidget::updateLoadImg(int index){
     int l = 0, r = 0;     //控制图片加载边界
     int xIndex;           //控制绘图的横坐标索引
@@ -435,6 +444,7 @@ void ImageWidget::slot_itemClicked(QListWidgetItem * item){
     isSingleItemUI = true;
 
     curIndex = pListShow->row(item);
+    pListShow->checkboxList->at(curIndex)->setCheckState(pListShow->checkboxList->at(curIndex)->isChecked() ? Qt::Unchecked : Qt::Checked);
     updateLoadImg(curIndex);
 
     //menu button
@@ -479,10 +489,23 @@ picListShow::~picListShow()
 
 void picListShow::mouseMoveEvent(QMouseEvent *event)
 {
+    static int lastScrollValue = 0;
     if(!slidePoint.isNull()){
         bool direction = (slidePoint.y() < event->pos().y());
         int singleStep = (direction ? -4 : 4);
         this->verticalScrollBar()->setValue(verticalScrollBar()->value() + singleStep);
+
+        int y = slidePoint.y();
+
+//        if(verticalScrollBar()->value() > 227 || verticalScrollBar()->value() < 1)
+//            return;
+        if(verticalScrollBar()->value() == lastScrollValue)
+            return;
+
+        for(int i = 0; i < checkboxList->size(); i++)
+            checkboxList->at(i)->setGeometry((*checkboxList)[i]->geometry().x(), (*checkboxList)[i]->geometry().y() - singleStep, (*checkboxList)[i]->width(), (*checkboxList)[i]->height());
+
+        lastScrollValue = verticalScrollBar()->value();
     }
 }
 
@@ -499,10 +522,10 @@ void picListShow::mouseReleaseEvent(QMouseEvent *event)
 {
     QPoint EndPoint;
     EndPoint = event->pos();
-    if(EndPoint == slidePoint)
-        itemClicked(this->selectedItems().at(0));   //    //sent itemClicked signal to ImageView
-    else
-        slidePoint = QPoint();  //resets the scroll drag
+//    if(EndPoint == slidePoint)
+//        itemClicked(this->selectedItems().at(0));   //    //sent itemClicked signal to ImageView
+//    else
+//        slidePoint = QPoint();  //resets the scroll drag
 
 
     QListWidget::mouseReleaseEvent(event);

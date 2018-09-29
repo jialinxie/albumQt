@@ -33,3 +33,6 @@ HEADERS += \
     imagewidget.h
 
 CONFIG += console
+
+RESOURCES += \
+    resource.qrc

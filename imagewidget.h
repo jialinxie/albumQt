@@ -13,6 +13,7 @@ class QListWidgetItem;
 class QImage;
 class QGestureEvent;
 class picListShow;
+class QCheckBox;
 class ImageWidget : public QWidget
 {
     Q_OBJECT
@@ -76,6 +77,8 @@ class picListShow : public QListWidget{
 public:
     explicit picListShow(QWidget *parent);
     ~picListShow();
+    QList<QCheckBox*> *checkboxList;
+
 protected:
     void mouseMoveEvent(QMouseEvent *event);
     void mousePressEvent(QMouseEvent *event);
