@@ -513,7 +513,6 @@ void picListShow::mousePressEvent(QMouseEvent *event)
 {
     if(event->button() == Qt::LeftButton){
         slidePoint = event->pos();
-        yPos0 = slidePoint.x();
     }
     QListWidget::mousePressEvent(event);
 }

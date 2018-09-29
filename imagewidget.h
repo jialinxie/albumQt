@@ -85,12 +85,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event);
 
 private:
-    int yPos0;
-    int yPos1;
-    int xPos0;
-    int xPos1;
     QPoint slidePoint;
-    ImageWidget *imageP;
 };
 
 #endif // IMAGEWIDGET_H
