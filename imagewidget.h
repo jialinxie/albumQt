@@ -27,6 +27,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event);
+    void keyReleaseEvent(QKeyEvent *event);
     void gestureEvent(QGestureEvent *event);
     //bool event(QEvent *event);
     void touchEvent(QEvent *event);

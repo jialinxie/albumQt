@@ -15,7 +15,7 @@
 #include <QGestureEvent>
 #include <QtMath>
 #include <QCheckBox>
-
+#include <qnamespace.h>
 #define picViewSize 78
 
 ImageWidget::ImageWidget(QWidget *parent)
@@ -65,6 +65,7 @@ ImageWidget::ImageWidget(QWidget *parent)
     QScrollBar *scrollBar = pListShow->verticalScrollBar();
     pListShow->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     pListShow->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    pListShow->setFocus();
 
     pListShow->checkboxList = new QList<QCheckBox*>;
     pListShow->checkboxList->clear();
@@ -265,6 +266,38 @@ void ImageWidget::mouseDoubleClickEvent(QMouseEvent *event)
     }
     else
         QWidget::mouseDoubleClickEvent(event);
+}
+
+void ImageWidget::keyReleaseEvent(QKeyEvent *event)
+{
+    printf("Release! key = %d,currentRow = %d\n", event->key(), pListShow->currentRow());
+
+    if(isSingleItemUI){
+        switch (event->key()){
+            case Qt::Key_Left:
+                pListShow->setCurrentRow(curIndex - 1);
+                slot_itemClicked(pListShow->currentItem());
+            break;
+            case Qt::Key_Right:
+                pListShow->setCurrentRow(curIndex + 1);
+                slot_itemClicked(pListShow->currentItem());
+            break;
+            case Qt::Key_A: //back to list
+                back2Album();
+            break;
+            default:
+                break;
+        }
+    }else{
+        curIndex = pListShow->currentRow();
+        pListShow->setCurrentRow(curIndex);
+        switch (event->key()){
+            case Qt::Key_Return:
+                slot_itemClicked(pListShow->currentItem());
+            default:
+                break;
+        }
+    }
 }
 
 void ImageWidget::gestureEvent(QGestureEvent *event){
