@@ -248,13 +248,30 @@ void ImageWidget::mouseDoubleClickEvent(QMouseEvent *event)
             double w = cenPixW * zoomScale;
             double h = cenPixH * zoomScale;
 
+            double radio = sqrt(zoomScale);
+
             mShowWidget->close();
             mShowWidget->setPixmap(cenPixmap.scaled(w, h, Qt::KeepAspectRatio));   //按比例缩放到(w, h)大小
             mShowWidget->resize(w, h);
 
             QPoint clickP = event->pos();
-            //mShowWidget->move(-(clickP.x() * (scale - 1) / 2), - (clickP.y() * (scale - 1) / 2));    //需要以双击位置为中心点放大
-            mShowWidget->move(0, 0);
+
+//            double offsetX =clickP.x() * radio;
+//            double offsetY =clickP.y() * radio;
+            double offsetX =(clickP.x() * (zoomScale - 1) / 2) ;
+            double offsetY =(clickP.y() * (zoomScale - 1) / 2) ;
+
+            if(offsetX >screenSize.width()/2){offsetX =  screenSize.width()*zoomScale - offsetX;}
+            if(offsetY >screenSize.height()/2){offsetY = screenSize.height()*zoomScale - offsetY;}
+
+
+            if(fabs(screenSize.width() - w)< 10){offsetX = 0;}
+            if(fabs(screenSize.height() - h)<10){offsetY = 0;}
+
+//            mShowWidget->move(-(clickP.x() * (zoomScale - 1) / 2), - (clickP.y() * (zoomScale - 1) / 2));    //需要以双击位置为中心点放大
+//            mShowWidget->move((clickP.x() * radio/2 - this->width()/2), (clickP.y() * radio/2) - this->height()/2);
+            mShowWidget->move(-offsetX, -offsetY);
+
             mShowWidget->show();
 
             return;
@@ -262,10 +279,13 @@ void ImageWidget::mouseDoubleClickEvent(QMouseEvent *event)
             ////qDebug() << "second double click!!!";
             isFirstDouble = true;
             isZoomMode = false;
+            return;
         }
     }
     else
+    {
         QWidget::mouseDoubleClickEvent(event);
+    }
 }
 
 void ImageWidget::keyReleaseEvent(QKeyEvent *event)
@@ -300,26 +320,50 @@ void ImageWidget::keyReleaseEvent(QKeyEvent *event)
     }
 }
 
-void ImageWidget::gestureEvent(QGestureEvent *event){
-    printf("gestureEvent\n");
+bool ImageWidget::gestureEvent(QGestureEvent *event){
+    printf(__FUNCTION__);
+//    qDebug()<<__FUNCTION__<<" event->type() = "<<event->type()<<endl;
+    if (QGesture *pan = event->gesture(Qt::PanGesture)){
+        panTriggered(static_cast<QPanGesture *>(pan));
+    }
+    if (QGesture *pinch = event->gesture(Qt::PinchGesture)){
+        pinchTriggered(static_cast<QPinchGesture *>(pinch));
+    }
+    return true;
+}
+
+bool ImageWidget::event(QEvent *event)
+{
+    qDebug()<<__FUNCTION__<<" event->type() = "<<event->type()<<endl;
+    if (event->type() == QEvent::Gesture){
+        return gestureEvent(static_cast<QGestureEvent*>(event));
+    }
+    return QWidget::event(event);
 }
 
 void ImageWidget::touchEvent(QEvent *event)
 {
     switch (event->type())
-      {
-        case QEvent::TouchBegin:
-            //ui->FFLabel[1]->setText("Event began.");
-            break;
-        case QEvent::TouchEnd:
-            //ui->FFLabel[1]->setText("Event ended.");
-            break;
-        case QEvent::TouchUpdate:
-        {
-            //ui->FFLabel[1]->setText("Event updated.");
-            break;
-        }
-      }
+    {
+    case QEvent::TouchBegin:
+        //ui->FFLabel[1]->setText("Event began.");
+        break;
+    case QEvent::TouchEnd:
+        //ui->FFLabel[1]->setText("Event ended.");
+        break;
+    case QEvent::TouchUpdate:
+    {
+        //ui->FFLabel[1]->setText("Event updated.");
+        break;
+    }
+//    case QEvent::Gesture:
+//    {
+//        return gestureEvent(static_cast<QGestureEvent*>(event));
+//    }
+    default:
+    {}
+
+    }
 }
 
 //bool ImageWidget::event(QEvent *event)
@@ -450,25 +494,29 @@ double ImageWidget::getScaleValue(QSize img, QSize view)
     double y = h / hi;
 
     if((wi <= w) && (hi <= h)){
-        if (x >= y)
+        if (x >= y){
             return x;
-        else
+        }else{
             return y;
+        }
     }else
         if((wi > w) && (hi <= h)){
             //get: y > x
             return y;
-        }else
+        }else{
             if((wi <= w) && (hi >=h)){
                 //get: x > y
                 return x;
-            }else
+            }else{
                 if((wi >= w) && (hi >= h)){
-                    if(x > y)
+                    if(x > y){
                         return 1/x;
-                    else
+                    }else{
                         return 1/y;
+                    }
                 }
+            }
+        }
 }
 
 // 全屏等比例显示图像
@@ -562,3 +610,52 @@ void picListShow::mouseReleaseEvent(QMouseEvent *event)
 
     QListWidget::mouseReleaseEvent(event);
 }
+
+
+
+
+void ImageWidget::panTriggered(QPanGesture *gesture) {
+#ifndef QT_NO_CURSOR
+    switch (gesture->state()) {
+    case Qt::GestureStarted:
+    case Qt::GestureUpdated:
+        setCursor(Qt::SizeAllCursor);
+        break;
+    default:
+        setCursor(Qt::ArrowCursor);
+    }
+#endif
+    QPointF delta = gesture->delta();
+    horizontalOffset += delta.x();
+    verticalOffset += delta.y();
+    update();
+
+}
+
+void ImageWidget::pinchTriggered(QPinchGesture *gesture)
+{
+    QPinchGesture::ChangeFlags changeFlags = gesture->changeFlags();
+    if (changeFlags & QPinchGesture::ScaleFactorChanged) {
+        currentStepScaleFactor = gesture->totalScaleFactor();
+    }
+    if (gesture->state() == Qt::GestureFinished) {
+        scaleFactor *= currentStepScaleFactor;
+        currentStepScaleFactor = 1;
+    }
+    update();
+}
+
+// 缩放 - scaleFactor：缩放的比例因子
+void ImageWidget::zoom(float scale)
+{
+    scaleFactor *= scale;
+    update();
+}
+
+
+
+
+
+
+
+

@@ -8,6 +8,9 @@
 #include <mainwindow.h>
 #include <QPoint>
 #include <QListWidget>
+
+#include "QPanGesture"
+
 class QStringList;
 class QListWidgetItem;
 class QImage;
@@ -28,8 +31,8 @@ protected:
     void mouseMoveEvent(QMouseEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event);
     void keyReleaseEvent(QKeyEvent *event);
-    void gestureEvent(QGestureEvent *event);
-    //bool event(QEvent *event);
+    bool gestureEvent(QGestureEvent *event);
+    bool event(QEvent *event);
     void touchEvent(QEvent *event);
 private:
     QPoint m_mouseSrcPos;   //滑动的初始点
@@ -49,6 +52,12 @@ private:
     double zoomScale;
     int xPosLast;
     int yPosLast;
+
+    qreal horizontalOffset;
+    qreal verticalOffset;
+
+    qreal scaleFactor;
+    qreal currentStepScaleFactor;
 
     void setLabelMove(bool enable);
     void zoomOut(void);     //缩小图片
@@ -71,6 +80,18 @@ private:
     QPixmap showPixmap;
     QImage  cenImg;
     picListShow *pListShow;
+
+
+    /**
+     * bin 20181107
+     * @brief panTriggered
+     * @param gesture
+     */
+    void panTriggered(QPanGesture *gesture);
+
+    void pinchTriggered(QPinchGesture *gesture);
+    //缩放因子
+    void zoom(float scale);
 };
 
 class picListShow : public QListWidget{
