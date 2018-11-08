@@ -231,7 +231,9 @@ void ImageWidget::mouseMoveEvent(QMouseEvent *event)
 
 void ImageWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    QSize screenSize(240, 320);
+    qDebug()<<"FUNC:"<<__FUNCTION__<<endl;
+//    QSize screenSize(240, 320);
+    QSize screenSize(this->width(),this->height());
     QSize cenPicSize(cenPixW, cenPixH);
 
     if(isSingleItemUI){                 //判断当前是否查看图像界面 查看图像界面/缩略图界面
@@ -245,10 +247,8 @@ void ImageWidget::mouseDoubleClickEvent(QMouseEvent *event)
 
             zoomScale = getScaleValue(cenPicSize, screenSize);
 
-            double w = cenPixW * zoomScale;
-            double h = cenPixH * zoomScale;
-
-            double radio = sqrt(zoomScale);
+            const double w = cenPixW * zoomScale;
+            const double h = cenPixH * zoomScale;
 
             mShowWidget->close();
             mShowWidget->setPixmap(cenPixmap.scaled(w, h, Qt::KeepAspectRatio));   //按比例缩放到(w, h)大小
@@ -256,20 +256,23 @@ void ImageWidget::mouseDoubleClickEvent(QMouseEvent *event)
 
             QPoint clickP = event->pos();
 
-//            double offsetX =clickP.x() * radio;
-//            double offsetY =clickP.y() * radio;
-            double offsetX =(clickP.x() * (zoomScale - 1) / 2) ;
-            double offsetY =(clickP.y() * (zoomScale - 1) / 2) ;
+            const double screenX = this->width();
+            const double screenY = this->height();
+            qDebug()<<"screenX = "<<screenX<<" ;;;  screenY ="<<screenY<<endl;
+            //需要以双击位置为中心点放大  偏移量计算
+            double offsetX =clickP.x() * zoomScale - screenX/2;
+            double offsetY =clickP.y() * zoomScale - screenY/2;
 
-            if(offsetX >screenSize.width()/2){offsetX =  screenSize.width()*zoomScale - offsetX;}
-            if(offsetY >screenSize.height()/2){offsetY = screenSize.height()*zoomScale - offsetY;}
+            //修正上界
+            if(clickP.x() < screenX/2 ){offsetX = 0;}
+            if(clickP.y() < screenY/2 ){offsetY = 0;}
+            //修正下界
+            if( w - clickP.x() * zoomScale < screenX/2){offsetX = w - screenX;}
+            if( h - clickP.y() * zoomScale < screenY/2){offsetY = h - screenY;}
 
+            if(fabs(screenX - w)< 10){offsetX = 0;}
+            if(fabs(screenY - h)<10){offsetY = 0;}
 
-            if(fabs(screenSize.width() - w)< 10){offsetX = 0;}
-            if(fabs(screenSize.height() - h)<10){offsetY = 0;}
-
-//            mShowWidget->move(-(clickP.x() * (zoomScale - 1) / 2), - (clickP.y() * (zoomScale - 1) / 2));    //需要以双击位置为中心点放大
-//            mShowWidget->move((clickP.x() * radio/2 - this->width()/2), (clickP.y() * radio/2) - this->height()/2);
             mShowWidget->move(-offsetX, -offsetY);
 
             mShowWidget->show();
@@ -334,7 +337,7 @@ bool ImageWidget::gestureEvent(QGestureEvent *event){
 
 bool ImageWidget::event(QEvent *event)
 {
-    qDebug()<<__FUNCTION__<<" event->type() = "<<event->type()<<endl;
+//    qDebug()<<__FUNCTION__<<" event->type() = "<<event->type()<<endl;
     if (event->type() == QEvent::Gesture){
         return gestureEvent(static_cast<QGestureEvent*>(event));
     }
