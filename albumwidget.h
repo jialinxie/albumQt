@@ -1,6 +1,6 @@
-﻿// imagewidget.h
-#ifndef IMAGEWIDGET_H
-#define IMAGEWIDGET_H
+﻿// AlbumWidget.h
+#ifndef AlbumWidget_H
+#define AlbumWidget_H
 
 #include <QtWidgets/QWidget>
 #include <QLabel>
@@ -10,22 +10,29 @@
 #include <QListWidget>
 
 #include "QPanGesture"
+#include <QDir>
 
+#define ALBUM_PATH      "../Camera/"
+//屏幕分辨率，以及标题高度
+#define SCREEN_WIDTH              (240)
+#define SCREEN_HEIGHT             (320)
+#define TOP_TITLE_HEIGHT           (30)
 class QStringList;
 class QListWidgetItem;
 class QImage;
 class QGestureEvent;
 class picListShow;
 class QCheckBox;
-class ImageWidget : public QWidget
+class AlbumWidget : public QWidget
 {
     Q_OBJECT
 
 public:
-    ImageWidget(QWidget *parent = 0);
-    ~ImageWidget();
+    AlbumWidget(QWidget *parent = 0);
+    ~AlbumWidget();
 
 protected:
+    void focusInEvent(QFocusEvent *e);
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
@@ -81,6 +88,11 @@ private:
     QImage  cenImg;
     picListShow *pListShow;
 
+    int updateUI();
+    QDir dir;
+    QStringList filters;
+    QSize IMAGE_SIZE;
+    QSize ITEM_SIZE;
 
     /**
      * bin 20181107
@@ -110,4 +122,4 @@ private:
     QPoint slidePoint;
 };
 
-#endif // IMAGEWIDGET_H
+#endif // AlbumWidget_H

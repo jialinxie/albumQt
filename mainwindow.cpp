@@ -1,10 +1,10 @@
 ﻿#include "mainwindow.h"
 //#include "ui_mainwindow.h"
-#include "imagewidget.h"
+#include "albumwidget.h"
 
 MainWindow::MainWindow(QWidget *parent)
 {
-    ImageWidget *imageListVew = new ImageWidget(this);
+    AlbumWidget *imageListVew = new AlbumWidget(this);
     imageListVew->show();
 }
 

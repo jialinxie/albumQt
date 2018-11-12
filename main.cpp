@@ -1,11 +1,11 @@
 ﻿#include "mainwindow.h"
 #include <QApplication>
-#include <imagewidget.h>
+#include <albumwidget.h>
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-    ImageWidget *imageListVew = new ImageWidget();
+    AlbumWidget *imageListVew = new AlbumWidget();
     imageListVew->show();
     return a.exec();
 }

@@ -1,5 +1,5 @@
-﻿#include "imagewidget.h"
-#include <QDir>
+﻿#include "albumwidget.h"
+#include <QLabel>
 #include <QStringList>
 #include <QListWidget>
 #include <QVBoxLayout>
@@ -14,11 +14,10 @@
 #include <QGesture>
 #include <QGestureEvent>
 #include <QtMath>
-#include <QCheckBox>
 #include <qnamespace.h>
 #define picViewSize 78
 
-ImageWidget::ImageWidget(QWidget *parent)
+AlbumWidget::AlbumWidget(QWidget *parent)
     : QWidget(parent)
     , mousePress(false)
     , mouseMove(false)
@@ -35,23 +34,8 @@ ImageWidget::ImageWidget(QWidget *parent)
 {
     const QSize IMAGE_SIZE(picViewSize, picViewSize);
     const QSize ITEM_SIZE(picViewSize,  picViewSize);
-    this->setGeometry(0, 0, 240, 320);
 
-    m_strPath = "../Camera";
-
-    QDir dir(m_strPath);
-    if (!dir.exists()) {
-        return;
-    }
-    // 设置过滤器
-    dir.setFilter(QDir::Files | QDir::NoSymLinks);
-    QStringList filters;
-    filters << "*.png" << "*.jpg" <<"*.bmp";
-    dir.setNameFilters(filters);
-    m_imgList = dir.entryList();
-    if (m_imgList.count() <= 0) {
-        return;
-    }
+    setGeometry(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     // QListWidget基本设置
     pListShow = new picListShow(this);
@@ -65,28 +49,33 @@ ImageWidget::ImageWidget(QWidget *parent)
     QScrollBar *scrollBar = pListShow->verticalScrollBar();
     pListShow->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     pListShow->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    pListShow->show();
     pListShow->setFocus();
 
-    pListShow->checkboxList = new QList<QCheckBox*>;
-    pListShow->checkboxList->clear();
+    //*********************************init picList here
+    m_imgList.clear();
+    pListShow->clear();
+
+    // 判断路径是否存在
+    dir.setCurrent(ALBUM_PATH);
+    if (!dir.exists()) {
+        printf("Camera dir not exist!!!\n");
+    }
+    // 设置过滤器
+    dir.setFilter(QDir::Files | QDir::NoSymLinks);
+    filters << "*.png" << "*.jpg" <<"*.bmp";
+    dir.setNameFilters(filters);
+    m_imgList = dir.entryList();
 
     // 创建单元项
-    for (int i = 0; i < m_imgList.count(); ++i) {
-        QPixmap pixmap(m_strPath + "/" + m_imgList.at(i));
+    for (int i = 0; i<m_imgList.count(); ++i) {
+        QPixmap pixmap(ALBUM_PATH + m_imgList.at(i));
         QListWidgetItem *listWidgetItem = new QListWidgetItem(QIcon(pixmap.scaled(IMAGE_SIZE)), NULL);  //delete name display
         listWidgetItem->setSizeHint(ITEM_SIZE);
-
-        QCheckBox *checkbox = new QCheckBox(pListShow);
-        checkbox->setCheckState(Qt::Unchecked);
-        checkbox->setGeometry(listWidgetItem->sizeHint().width() * (i % 3 + 1) - 27, listWidgetItem->sizeHint().height() * (i / 3) - 4, 35, 35);
-        checkbox->setStyleSheet("QCheckBox::indicator { width:35px; height: 35px;} QCheckBox::indicator::checked {image: url(:/checkboxYes.png);}QCheckBox::indicator::unchecked {image: url(:/checkboxNo.png);}");
-        pListShow->checkboxList->append(checkbox);
-        pListShow->setItemWidget(listWidgetItem,  checkbox);
-
         pListShow->insertItem(i, listWidgetItem);
     }
+    //*********************************init picList done
 
-    // 信号与槽
     connect(pListShow, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(slot_itemClicked(QListWidgetItem*)));
     mShowWidget = new QLabel(this);
     menuButton = new QPushButton(this);
@@ -99,11 +88,16 @@ ImageWidget::ImageWidget(QWidget *parent)
     setAttribute(Qt::WA_AcceptTouchEvents);
 }
 
-ImageWidget::~ImageWidget(){
+AlbumWidget::~AlbumWidget(){
 
 }
 
-void ImageWidget::mousePressEvent(QMouseEvent *event)
+void AlbumWidget::focusInEvent(QFocusEvent *e){
+    qDebug()<<"FUNC:"<<__FUNCTION__<<endl;
+    int ret = updateUI();
+}
+
+void AlbumWidget::mousePressEvent(QMouseEvent *event)
 {
     mousePress = true;
     m_mouseSrcPos = event->pos();
@@ -115,7 +109,7 @@ void ImageWidget::mousePressEvent(QMouseEvent *event)
 //                                       m_mouseSrcPos.x(),    m_mouseSrcPos.y(),   mShowWidget->x(),  mShowWidget->y());
 }
 
-void ImageWidget::mouseReleaseEvent(QMouseEvent *event)
+void AlbumWidget::mouseReleaseEvent(QMouseEvent *event)
 {
     m_mouseDstPos = event->pos();
     int xPos = m_mouseDstPos.x() - m_mouseSrcPos.x();
@@ -162,7 +156,7 @@ void ImageWidget::mouseReleaseEvent(QMouseEvent *event)
     }
 }
 
-void ImageWidget::mouseMoveEvent(QMouseEvent *event)
+void AlbumWidget::mouseMoveEvent(QMouseEvent *event)
 {
     mouseMove = true;
     m_mouseDstPos = event->pos();
@@ -229,10 +223,9 @@ void ImageWidget::mouseMoveEvent(QMouseEvent *event)
     }
 }
 
-void ImageWidget::mouseDoubleClickEvent(QMouseEvent *event)
+void AlbumWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
     qDebug()<<"FUNC:"<<__FUNCTION__<<endl;
-//    QSize screenSize(240, 320);
     QSize screenSize(this->width(),this->height());
     QSize cenPicSize(cenPixW, cenPixH);
 
@@ -291,7 +284,7 @@ void ImageWidget::mouseDoubleClickEvent(QMouseEvent *event)
     }
 }
 
-void ImageWidget::keyReleaseEvent(QKeyEvent *event)
+void AlbumWidget::keyReleaseEvent(QKeyEvent *event)
 {
     printf("Release! key = %d,currentRow = %d\n", event->key(), pListShow->currentRow());
 
@@ -323,7 +316,7 @@ void ImageWidget::keyReleaseEvent(QKeyEvent *event)
     }
 }
 
-bool ImageWidget::gestureEvent(QGestureEvent *event){
+bool AlbumWidget::gestureEvent(QGestureEvent *event){
     printf(__FUNCTION__);
 //    qDebug()<<__FUNCTION__<<" event->type() = "<<event->type()<<endl;
     if (QGesture *pan = event->gesture(Qt::PanGesture)){
@@ -335,7 +328,7 @@ bool ImageWidget::gestureEvent(QGestureEvent *event){
     return true;
 }
 
-bool ImageWidget::event(QEvent *event)
+bool AlbumWidget::event(QEvent *event)
 {
 //    qDebug()<<__FUNCTION__<<" event->type() = "<<event->type()<<endl;
     if (event->type() == QEvent::Gesture){
@@ -344,7 +337,7 @@ bool ImageWidget::event(QEvent *event)
     return QWidget::event(event);
 }
 
-void ImageWidget::touchEvent(QEvent *event)
+void AlbumWidget::touchEvent(QEvent *event)
 {
     switch (event->type())
     {
@@ -369,7 +362,7 @@ void ImageWidget::touchEvent(QEvent *event)
     }
 }
 
-//bool ImageWidget::event(QEvent *event)
+//bool AlbumWidget::event(QEvent *event)
 //{
 //    switch (event->type()) {
 //    case QEvent::TouchBegin:
@@ -415,22 +408,24 @@ void ImageWidget::touchEvent(QEvent *event)
 //gesturechange     // 当有两根或多根手指在屏幕上，并且有手指移动的时候触发
 //gestureend        // 当倒数第二根手指提起的时候触发，结束gesture
 
-void ImageWidget::setLabelMove(bool enable)
+void AlbumWidget::setLabelMove(bool enable)
 {
     label_move = enable;
 }
 
-void ImageWidget::zoomOut()
+void AlbumWidget::zoomOut()
 {
 
 }
 
-void ImageWidget::zoomIn()
+void AlbumWidget::zoomIn()
 {
 
 }
 
-void ImageWidget::updateLoadImg(int index){
+void AlbumWidget::updateLoadImg(int index){
+    qDebug()<<"FUNC:"<<__FUNCTION__<<endl;
+
     int l = 0, r = 0;     //控制图片加载边界
     int xIndex;           //控制绘图的横坐标索引
     l = index;
@@ -460,8 +455,8 @@ void ImageWidget::updateLoadImg(int index){
 
     //如果点击第一张图片，自动加载下一张，禁止右滑|如果点击最后一张，自动加载上一张，禁止左滑
     for(int i = l; i <= r; i++){
-        //qDebug() << m_strPath + "/" + m_imgList.at(i);
-        QImage image(m_strPath + "/" + m_imgList.at(i));
+        //qDebug() << ALBUM_PATH + "/" + m_imgList.at(i);
+        QImage image(ALBUM_PATH + m_imgList.at(i));
         QPixmap pixmap = QPixmap::fromImage(image).scaled(picSize, Qt::KeepAspectRatio);
 
         int h = pixmap.height();
@@ -486,7 +481,7 @@ void ImageWidget::updateLoadImg(int index){
         mShowWidget->move((l - r + 1) * 240, 0);
 }
 
-double ImageWidget::getScaleValue(QSize img, QSize view)
+double AlbumWidget::getScaleValue(QSize img, QSize view)
 {
     double w = view.width() * 1.0;
     double h = view.height()* 1.0;
@@ -521,14 +516,39 @@ double ImageWidget::getScaleValue(QSize img, QSize view)
             }
         }
 }
+int AlbumWidget::updateUI()
+{
+    m_imgList.clear();
+    pListShow->clear();
+
+    // 判断路径是否存在
+    dir.setCurrent(ALBUM_PATH);
+    if (!dir.exists()) {
+        return -1;
+    }
+    // 设置过滤器
+    dir.setFilter(QDir::Files | QDir::NoSymLinks);
+    filters << "*.png" << "*.jpg" <<"*.bmp";
+    dir.setNameFilters(filters);
+    m_imgList = dir.entryList();
+
+    // 创建单元项
+    for (int i = 0; i<m_imgList.count(); ++i) {
+        QPixmap pixmap(ALBUM_PATH + m_imgList.at(i));
+        QListWidgetItem *listWidgetItem = new QListWidgetItem(QIcon(pixmap.scaled(IMAGE_SIZE)), NULL);  //delete name display
+        listWidgetItem->setSizeHint(ITEM_SIZE);
+        pListShow->insertItem(i, listWidgetItem);
+    }
+    qDebug() << "pListShow.count = " << pListShow->count();
+    return 0;
+}
 
 // 全屏等比例显示图像
-void ImageWidget::slot_itemClicked(QListWidgetItem * item){
-    //qDebug() << "slot_itemClicked, item index= " << pListShow->row(item) << "count = " << pListShow->count();
+void AlbumWidget::slot_itemClicked(QListWidgetItem * item){
+    qDebug() << "slot_itemClicked, item index= " << pListShow->row(item) << "count = " << pListShow->count();
     isSingleItemUI = true;
 
     curIndex = pListShow->row(item);
-    pListShow->checkboxList->at(curIndex)->setCheckState(pListShow->checkboxList->at(curIndex)->isChecked() ? Qt::Unchecked : Qt::Checked);
     updateLoadImg(curIndex);
 
     //menu button
@@ -539,19 +559,17 @@ void ImageWidget::slot_itemClicked(QListWidgetItem * item){
     //back button
     backButton->setText("返回");
     backButton->setGeometry(0, 300, 30, 20);
-
-    //slot and singnal
     connect(backButton, SIGNAL(clicked()), this, SLOT(back2Album()));
 
     mShowWidget->show();
 }
 
-void ImageWidget::menuView(void){
+void AlbumWidget::menuView(void){
     qDebug() << "menuView";
 }
 
-void ImageWidget::back2Album(void){
-    //qDebug() << "back2Album";
+void AlbumWidget::back2Album(void){
+    qDebug() << "back2Album";
     isSingleItemUI = false;
     isZoomMode = false;
 
@@ -586,9 +604,6 @@ void picListShow::mouseMoveEvent(QMouseEvent *event)
         if(verticalScrollBar()->value() == lastScrollValue)
             return;
 
-        for(int i = 0; i < checkboxList->size(); i++)
-            checkboxList->at(i)->setGeometry((*checkboxList)[i]->geometry().x(), (*checkboxList)[i]->geometry().y() - singleStep, (*checkboxList)[i]->width(), (*checkboxList)[i]->height());
-
         lastScrollValue = verticalScrollBar()->value();
     }
 }
@@ -617,7 +632,7 @@ void picListShow::mouseReleaseEvent(QMouseEvent *event)
 
 
 
-void ImageWidget::panTriggered(QPanGesture *gesture) {
+void AlbumWidget::panTriggered(QPanGesture *gesture) {
 #ifndef QT_NO_CURSOR
     switch (gesture->state()) {
     case Qt::GestureStarted:
@@ -635,7 +650,7 @@ void ImageWidget::panTriggered(QPanGesture *gesture) {
 
 }
 
-void ImageWidget::pinchTriggered(QPinchGesture *gesture)
+void AlbumWidget::pinchTriggered(QPinchGesture *gesture)
 {
     QPinchGesture::ChangeFlags changeFlags = gesture->changeFlags();
     if (changeFlags & QPinchGesture::ScaleFactorChanged) {
@@ -649,7 +664,7 @@ void ImageWidget::pinchTriggered(QPinchGesture *gesture)
 }
 
 // 缩放 - scaleFactor：缩放的比例因子
-void ImageWidget::zoom(float scale)
+void AlbumWidget::zoom(float scale)
 {
     scaleFactor *= scale;
     update();

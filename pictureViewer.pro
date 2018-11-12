@@ -26,11 +26,11 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    imagewidget.cpp
+    albumwidget.cpp
 
 HEADERS += \
         mainwindow.h \
-    imagewidget.h
+    albumwidget.h
 
 CONFIG += console
 
