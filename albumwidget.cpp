@@ -31,7 +31,12 @@ AlbumWidget::AlbumWidget(QWidget *parent)
     , cenPixH(0)
     , zoomScale(0.0)
     , xPosLast(0)
-    , yPosLast(0)
+    , yPosLast(0),
+  horizontalOffset(0),
+  verticalOffset(0),
+  rotationAngle(0),
+  scaleFactor(1),
+  currentStepScaleFactor(1)
 {
     IMAGE_SIZE = QSize(PICVIEWSIZE, PICVIEWSIZE);
     ITEM_SIZE = QSize(PICVIEWSIZE, PICVIEWSIZE);
@@ -39,8 +44,8 @@ AlbumWidget::AlbumWidget(QWidget *parent)
     setGeometry(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     // QListWidget基本设置
-    pListShow = new picListShow(this);
-    pListShow->setGeometry(0, 0, 240, 320);
+    pListShow = new QListWidget(this);
+    pListShow->setGeometry(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     pListShow->setIconSize(IMAGE_SIZE);
     pListShow->setResizeMode(QListView::Adjust);
     pListShow->setViewMode(QListView::IconMode);
@@ -50,7 +55,7 @@ AlbumWidget::AlbumWidget(QWidget *parent)
     QScrollBar *scrollBar = pListShow->verticalScrollBar();
     pListShow->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     pListShow->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
-    pListShow->setFocus();
+//    pListShow->setFocus();
 
     updateUI();
     connect(pListShow, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(slot_itemClicked(QListWidgetItem*)));
@@ -60,7 +65,7 @@ AlbumWidget::AlbumWidget(QWidget *parent)
     backButton   = new QPushButton(this);
 
     mShowWidget->setAutoFillBackground(true);
-    mShowWidget->setGeometry(0, 0, 240 * 2, 320);  //缓存两张图片
+    mShowWidget->setGeometry(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);  //缓存两张图片
     mShowWidget->hide();
 
     setAttribute(Qt::WA_AcceptTouchEvents);
@@ -110,27 +115,27 @@ void AlbumWidget::mouseReleaseEvent(QMouseEvent *event)
     int yPos = m_mouseDstPos.y() - m_mouseSrcPos.y();
 
     if(!isZoomMode){
-        if (mouseMove) {
-            if((curIndex == 0) && (xPos > 0)){
-                return;
-            }else
-            if((curIndex == pListShow->count() - 1) && (xPos < 0)){
-                return;
-            }
+//        if (mouseMove) {
+//            if((curIndex == 0) && (xPos > 0)){
+//                return;
+//            }else
+//            if((curIndex == pListShow->count() - 1) && (xPos < 0)){
+//                return;
+//            }
 
-            if (xPos > 100) {                     //move right
-                 curIndex --;
-                 curPosX = -240;
-            }else
-            if(xPos < -100){
-                 curIndex ++;
-                 curPosX = 240;
-            }
+//            if (xPos > 100) {                     //move right
+//                 curIndex --;
+//                 curPosX = -240;
+//            }else
+//            if(xPos < -100){
+//                 curIndex ++;
+//                 curPosX = 240;
+//            }
 
-            mShowWidget->move(curPosX, 0);
-            updateLoadImg(curIndex);
-            currentImage = loadImage(ALBUM_PATH + files.at(curIndex));
-         }
+//            mShowWidget->move(curPosX, 0);
+//            goToImage(curIndex);
+//            currentImage = loadImage(ALBUM_PATH + files.at(curIndex));
+//         }
     }else{
         if(isZoomMode){
             if(isFirstDouble){
@@ -166,12 +171,17 @@ void AlbumWidget::mouseMoveEvent(QMouseEvent *event)
         if((curIndex == pListShow->count() - 1) && (xPos < 0)){
             xPos = 0;
             curPosX = 0;
-        }
-
-        if(curIndex == 0)
-            mShowWidget->move(xPos, 0);
+        }else
+            if(xPos > 0)
+                goToImage(curIndex + 1);
         else
-            mShowWidget->move(xPos - 240, 0);
+                goToImage(curIndex - 1);
+
+//        if(curIndex == 0)
+//            mShowWidget->move(xPos, 0);
+//        else
+//            mShowWidget->move(xPos - 240, 0);
+
     }else{
         int yPos = m_mouseDstPos.y() - m_mouseSrcPos.y();
 
@@ -459,64 +469,72 @@ void AlbumWidget::zoomIn()
 
 }
 
-void AlbumWidget::updateLoadImg(int index){
-    qDebug()<<"FUNC:"<<__FUNCTION__<<endl;
+void AlbumWidget::goNextImage()
+{
+    if (files.isEmpty())
+        return;
 
-    int l = 0, r = 0;     //控制图片加载边界
-    int xIndex;           //控制绘图的横坐标索引
-    l = index;
-    r = index;
+    if (position < files.size()-1) {
+        ++position;
+        prevImage = currentImage;
+        currentImage = nextImage;
+        if (position+1 < files.size())
+            nextImage = loadImage(ALBUM_PATH + files.at(position+1));
+        else
+            nextImage = QImage();
+    }
+    update();
+}
 
-    if((l < 0) || (r > (pListShow->count() - 1))){
-        mShowWidget->hide();
+void AlbumWidget::goPrevImage()
+{
+    if (files.isEmpty())
+        return;
+
+    if (position > 0) {
+        --position;
+        nextImage = currentImage;
+        currentImage = prevImage;
+        if (position > 0)
+            prevImage = loadImage(ALBUM_PATH + files.at(position-1));
+        else
+            prevImage = QImage();
+    }
+    update();
+}
+
+void AlbumWidget::goToImage(int index){
+
+    if (files.isEmpty())
+        return;
+
+    if (index < 0 || index >= files.size()) {
+//        qDebug() << "goToImage: invalid index: " << index;
         return;
     }
 
-    if(l > 0){                           //加载第一张以后的图片时，自动加载上一张
-        xIndex = index - 1;
-        l -= 1;
+    if (index == position+1) {
+        goNextImage();
+        return;
     }
-    else
-        xIndex = index;
 
-    if(r < (pListShow->count() - 1)) //加载最后一张之前的图片时，自动加载上一张
-        r += 1;
-
-    QSize picSize(240,320); //设定屏幕比例参数
-
-    QPixmap pixmap(QSize(this->width() * (r - l + 1), this->height()));
-    QPainter painter(&pixmap);
-    QImage image;
-
-    pixmap.fill(Qt::black);
-    //qDebug() << "l = " << l << " r = " << r << " xIndex = " << xIndex;
-
-    //如果点击第一张图片，自动加载下一张，禁止右滑|如果点击最后一张，自动加载上一张，禁止左滑
-    for(int i = l; i <= r; i++){
-        //qDebug() << ALBUM_PATH + "/" + files.at(i);
-        QImage image(ALBUM_PATH + files.at(i));
-        QPixmap pixmap = QPixmap::fromImage(image).scaled(picSize, Qt::KeepAspectRatio);
-
-        int h = pixmap.height();
-        int w = pixmap.width();
-
-        painter.drawPixmap((i - xIndex) * 240 + (240 - w) / 2, (320 - h) / 2, pixmap);
-
-        if(index == i){
-            cenPixW = w;
-            cenPixH = h;
-            cenPixmap = cenPixmap.fromImage(image); //KeepAspectRatio  KeepAspectRatioByExpanding , Qt::SmoothTransformation
-        }
+    if (position > 0 && index == position-1) {
+        goPrevImage();
+        return;
     }
-    showPixmap = pixmap;
 
-    mShowWidget->resize(showPixmap.size());
-    mShowWidget->setPixmap(showPixmap);
-    //加载2或3张图片后，总是从第0张开始显示，所以除了点击第一张图片，其它都要左移一个窗口宽度
-    if(index == r)
-        mShowWidget->move((l - r) * 240, 0);
+    position = index;
+
+    if (index > 0)
+        prevImage = loadImage(ALBUM_PATH + files.at(position-1));
     else
-        mShowWidget->move((l - r + 1) * 240, 0);
+        prevImage = QImage();
+    currentImage = loadImage(ALBUM_PATH + files.at(position));
+    if (position+1 < files.size())
+        nextImage = loadImage(ALBUM_PATH + files.at(position+1));
+    else
+        nextImage = QImage();
+    update();
 }
 
 double AlbumWidget::getScaleValue(QSize img, QSize view)
@@ -577,6 +595,8 @@ int AlbumWidget::updateUI()
     if(pListShow->count() > 0){
         pListShow->setCurrentRow(0);//默认光标在第一个
     }
+
+    goToImage(0);
     return 0;
 }
 
@@ -607,7 +627,7 @@ void AlbumWidget::slot_itemClicked(QListWidgetItem * item){
     isSingleItemUI = true;
 
     curIndex = pListShow->row(item);
-    updateLoadImg(curIndex);
+    goToImage(curIndex);
 
     //menu button
     menuButton->setText("菜单");
@@ -643,46 +663,46 @@ void AlbumWidget::back2Album(void){
 }
 
 
-picListShow::picListShow(QWidget *parent)
-{
-    this->setParent(parent);
-}
+//picListShow::picListShow(QWidget *parent)
+//{
+//    this->setParent(parent);
+//}
 
-picListShow::~picListShow()
-{
+//picListShow::~picListShow()
+//{
 
-}
+//}
 
-void picListShow::mouseMoveEvent(QMouseEvent *event)
-{
-    if(!slidePoint.isNull()){
-        bool direction = (slidePoint.y() < event->pos().y());
-        int singleStep = (direction ? -4 : 4);
-        this->verticalScrollBar()->setValue(verticalScrollBar()->value() + singleStep);
-    }
-}
+//void picListShow::mouseMoveEvent(QMouseEvent *event)
+//{
+//    if(!slidePoint.isNull()){
+//        bool direction = (slidePoint.y() < event->pos().y());
+//        int singleStep = (direction ? -4 : 4);
+//        this->verticalScrollBar()->setValue(verticalScrollBar()->value() + singleStep);
+//    }
+//}
 
-void picListShow::mousePressEvent(QMouseEvent *event)
-{
-    if(event->button() == Qt::LeftButton){
-        slidePoint = event->pos();
-        yPos0 = slidePoint.x();
-    }
-    QListWidget::mousePressEvent(event);
-}
+//void picListShow::mousePressEvent(QMouseEvent *event)
+//{
+//    if(event->button() == Qt::LeftButton){
+//        slidePoint = event->pos();
+//        yPos0 = slidePoint.x();
+//    }
+//    QListWidget::mousePressEvent(event);
+//}
 
-void picListShow::mouseReleaseEvent(QMouseEvent *event)
-{
-    QPoint EndPoint;
-    EndPoint = event->pos();
-//    if(EndPoint == slidePoint)
-//        itemClicked(this->selectedItems().at(0));   //    //sent itemClicked signal to ImageView
-//    else
-//        slidePoint = QPoint();  //resets the scroll drag
+//void picListShow::mouseReleaseEvent(QMouseEvent *event)
+//{
+//    QPoint EndPoint;
+//    EndPoint = event->pos();
+////    if(EndPoint == slidePoint)
+////        itemClicked(this->selectedItems().at(0));   //    //sent itemClicked signal to ImageView
+////    else
+////        slidePoint = QPoint();  //resets the scroll drag
 
 
-    QListWidget::mouseReleaseEvent(event);
-}
+//    QListWidget::mouseReleaseEvent(event);
+//}
 
 
 

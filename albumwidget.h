@@ -111,7 +111,9 @@ private:
     void setLabelMove(bool enable);
     void zoomOut(void);     //缩小图片
     void zoomIn(void);      //放大图片
-    void updateLoadImg(int index);
+    void goNextImage();
+    void goPrevImage();
+    void goToImage(int index);
     double getScaleValue(QSize img, QSize view);
 
 private slots:
@@ -133,7 +135,7 @@ private:
     QPixmap cenPixmap;
     QPixmap showPixmap;
     QImage  cenImg;
-    picListShow *pListShow;
+    QListWidget *pListShow;
     QDir dir;
     QStringList filters;
     QSize IMAGE_SIZE;
@@ -143,24 +145,24 @@ private:
     int position;
 };
 
-class picListShow : public QListWidget{
-    Q_OBJECT
-public:
-    explicit picListShow(QWidget *parent);
-    ~picListShow();
-    QList<QCheckBox*> *checkboxList;
+//class picListShow : public QListWidget{
+//    Q_OBJECT
+//public:
+//    explicit picListShow(QWidget *parent);
+//    ~picListShow();
+//    QList<QCheckBox*> *checkboxList;
 
-protected:
-    void mouseMoveEvent(QMouseEvent *event);
-    void mousePressEvent(QMouseEvent *event);
-    void mouseReleaseEvent(QMouseEvent *event);
+//protected:
+//    void mouseMoveEvent(QMouseEvent *event);
+//    void mousePressEvent(QMouseEvent *event);
+//    void mouseReleaseEvent(QMouseEvent *event);
 
-private:
-    int yPos0;
-    int yPos1;
-    int xPos0;
-    int xPos1;
-    QPoint slidePoint;
-};
+//private:
+//    int yPos0;
+//    int yPos1;
+//    int xPos0;
+//    int xPos1;
+//    QPoint slidePoint;
+//};
 
 #endif // AlbumWidget_H

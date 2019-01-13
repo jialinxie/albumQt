@@ -1,3 +1,6 @@
 *.o
 *.user
 *.obj
+moc_*.cpp
+moc*.h
+qrc*.cp
