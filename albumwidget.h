@@ -11,8 +11,14 @@
 
 #include "QPanGesture"
 #include <QDir>
+#include <QImage>
+#include <QImageReader>
 
-#define ALBUM_PATH      "../Camera/"
+#ifdef QT_PC
+    #define ALBUM_PATH      "../Camera/"
+#else
+    #define ALBUM_PATH      "/launcher/BHC_USER/Camera/"
+#endif
 //屏幕分辨率，以及标题高度
 #define SCREEN_WIDTH              (240)
 #define SCREEN_HEIGHT             (320)
@@ -69,7 +75,8 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent *event);
     void keyReleaseEvent(QKeyEvent *event);
     bool gestureEvent(QGestureEvent *event);
-    bool event(QEvent *event);
+    bool event(QEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
     void touchEvent(QEvent *event);
     bool backEvent();                                   //点击返回按钮式由派生类做判断，要不要返回
 
@@ -92,9 +99,12 @@ private:
     int xPosLast;
     int yPosLast;
 
+    QImage prevImage, nextImage;
+    QImage currentImage;
+
     qreal horizontalOffset;
     qreal verticalOffset;
-
+    qreal rotationAngle;
     qreal scaleFactor;
     qreal currentStepScaleFactor;
 
@@ -111,7 +121,12 @@ private slots:
     void albumMenuSlot(int idx);
 
 private:
-    QStringList imgList;                  // 文件目录下所有的图像文件名
+    int updateUI();
+    QImage loadImage(const QString &fileName);
+    void panTriggered(QPanGesture *gesture);
+    void pinchTriggered(QPinchGesture *gesture);
+    void zoom(float scale);
+
     QLabel *mShowWidget;                    // 图像显示窗口
     QPushButton *menuButton;
     QPushButton *backButton;
@@ -119,23 +134,13 @@ private:
     QPixmap showPixmap;
     QImage  cenImg;
     picListShow *pListShow;
-
-    int updateUI();
     QDir dir;
     QStringList filters;
     QSize IMAGE_SIZE;
     QSize ITEM_SIZE;
-
-    /**
-     * bin 20181107
-     * @brief panTriggered
-     * @param gesture
-     */
-    void panTriggered(QPanGesture *gesture);
-
-    void pinchTriggered(QPinchGesture *gesture);
-    //缩放因子
-    void zoom(float scale);
+    QString path;
+    QStringList files;                      // 文件目录下所有的图像文件名
+    int position;
 };
 
 class picListShow : public QListWidget{

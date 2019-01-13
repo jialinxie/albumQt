@@ -5,7 +5,10 @@
 #-------------------------------------------------
 
 QT       += core gui
-
+VERSION = "v0.1.2"
+#DEFINES += EY_Version
+CONFIG(QT_PC):DEFINES += QT_PC
+DEFINES += APP_VERSION=\\\"$$VERSION\\\"
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = pictureViewer

@@ -84,7 +84,7 @@ void AlbumWidget::focusInEvent(QFocusEvent *){
 
 void AlbumWidget::mousePressEvent(QMouseEvent *event)
 {
-    if (imgList.count() <= 0) {
+    if (files.count() <= 0) {
         return;
     }
 
@@ -129,6 +129,7 @@ void AlbumWidget::mouseReleaseEvent(QMouseEvent *event)
 
             mShowWidget->move(curPosX, 0);
             updateLoadImg(curIndex);
+            currentImage = loadImage(ALBUM_PATH + files.at(curIndex));
          }
     }else{
         if(isZoomMode){
@@ -225,6 +226,8 @@ void AlbumWidget::mouseDoubleClickEvent(QMouseEvent *event)
     if(isSingleItemUI){                 //判断当前是否查看图像界面 查看图像界面/缩略图界面
         if(isFirstDouble){              //第一次双击，放大到填充屏幕
             qDebug() << "first double click!!";
+            qDebug() << "cenPixmap.w = " << cenPixmap.width() << "cenPixmap.h = " << cenPixmap.height();
+
             isZoomMode = true;
             isFirstDouble = false;
 
@@ -238,36 +241,57 @@ void AlbumWidget::mouseDoubleClickEvent(QMouseEvent *event)
 
             mShowWidget->close();
             mShowWidget->setPixmap(cenPixmap.scaled(w, h, Qt::KeepAspectRatio));   //按比例缩放到(w, h)大小
-            mShowWidget->resize(w, h);
+//            mShowWidget->resize(w, h);
 
             QPoint clickP = event->pos();
-
-            const double screenX = this->width();
-            const double screenY = this->height();
-            qDebug()<<"screenX = "<<screenX<<" ;;;  screenY ="<<screenY<<endl;
+            qDebug() << "click x = " << clickP.x() << " y = " << clickP.y();
             //需要以双击位置为中心点放大  偏移量计算
-            double offsetX =clickP.x() * zoomScale - screenX/2;
-            double offsetY =clickP.y() * zoomScale - screenY/2;
+            double offsetX =clickP.x() * zoomScale - SCREEN_WIDTH/2;
+            double offsetY =clickP.y() * zoomScale - SCREEN_HEIGHT/2;
 
             //修正上界
-            if(clickP.x() < screenX/2 ){offsetX = 0;}
-            if(clickP.y() < screenY/2 ){offsetY = 0;}
+            if(clickP.x() < SCREEN_WIDTH/2 ){
+                offsetX = 0;
+            }
+
+            if(clickP.y() < SCREEN_HEIGHT/2 ){
+                offsetY = 0;
+            }
+
             //修正下界
-            if( w - clickP.x() * zoomScale < screenX/2){offsetX = w - screenX;}
-            if( h - clickP.y() * zoomScale < screenY/2){offsetY = h - screenY;}
+            if( w - clickP.x() * zoomScale < SCREEN_WIDTH/2){
+                offsetX = w - SCREEN_WIDTH;
+            }
+            if( h - clickP.y() * zoomScale < SCREEN_HEIGHT/2){
+                offsetY = h - SCREEN_HEIGHT;
+            }
 
-            if(fabs(screenX - w)< 10){offsetX = 0;}
-            if(fabs(screenY - h)<10){offsetY = 0;}
+            if(fabs(SCREEN_WIDTH - w)< 10){
+                offsetX = 0;
+            }
+            if(fabs(SCREEN_HEIGHT - h)<10){
+                offsetY = 0;
+            }
 
+            qDebug() << "offsetX x = " << offsetX << " y = " << offsetY;
+
+            if(offsetX > 120)   //consider to optimize
+                offsetX = 0;
             mShowWidget->move(-offsetX, -offsetY);
-
             mShowWidget->show();
-
             return;
         }else{   //第二次双击，返回slot_itemClicked
             qDebug() << "second double click!!!";
+            qDebug() << "cenPixmap.w = " << cenPixmap.width() << "cenPixmap.h = " << cenPixmap.height();
+
             isFirstDouble = true;
             isZoomMode = false;
+
+            mShowWidget->close();
+            mShowWidget->setPixmap(cenPixmap.scaled(SCREEN_WIDTH, SCREEN_HEIGHT, Qt::KeepAspectRatio));   //按比例缩放到(w, h)大小
+            qDebug() << "cenPixmap.w = " << cenPixmap.width() << "cenPixmap.h = " << cenPixmap.height();
+            mShowWidget->show();
+
             return;
         }
     }
@@ -309,7 +333,7 @@ void AlbumWidget::keyReleaseEvent(QKeyEvent *event)
 
 bool AlbumWidget::gestureEvent(QGestureEvent *event){
     printf(__FUNCTION__);
-    qDebug()<<__FUNCTION__<<" event->type() = "<<event->type()<<endl;
+//    qDebug()<<__FUNCTION__<<" event->type() = "<<event->type()<<endl;
     if (QGesture *pan = event->gesture(Qt::PanGesture)){
         panTriggered(static_cast<QPanGesture *>(pan));
     }
@@ -321,11 +345,29 @@ bool AlbumWidget::gestureEvent(QGestureEvent *event){
 
 bool AlbumWidget::event(QEvent *event)
 {
-    qDebug()<<__FUNCTION__<<" event->type() = "<<event->type()<<endl;
     if (event->type() == QEvent::Gesture){
         return gestureEvent(static_cast<QGestureEvent*>(event));
     }
     return QWidget::event(event);
+}
+
+void AlbumWidget::paintEvent(QPaintEvent *event)
+{
+    printf(__FUNCTION__);
+
+    QPainter p(this);
+
+    const qreal iw = currentImage.width();
+    const qreal ih = currentImage.height();
+    const qreal wh = height();
+    const qreal ww = width();
+
+    p.translate(ww/2, wh/2);
+    p.translate(horizontalOffset, verticalOffset);
+    p.rotate(rotationAngle);
+    p.scale(currentStepScaleFactor * scaleFactor, currentStepScaleFactor * scaleFactor);
+    p.translate(-iw/2, -ih/2);
+    p.drawImage(0, 0, currentImage);
 }
 
 void AlbumWidget::touchEvent(QEvent *event)
@@ -451,8 +493,8 @@ void AlbumWidget::updateLoadImg(int index){
 
     //如果点击第一张图片，自动加载下一张，禁止右滑|如果点击最后一张，自动加载上一张，禁止左滑
     for(int i = l; i <= r; i++){
-        //qDebug() << ALBUM_PATH + "/" + imgList.at(i);
-        QImage image(ALBUM_PATH + imgList.at(i));
+        //qDebug() << ALBUM_PATH + "/" + files.at(i);
+        QImage image(ALBUM_PATH + files.at(i));
         QPixmap pixmap = QPixmap::fromImage(image).scaled(picSize, Qt::KeepAspectRatio);
 
         int h = pixmap.height();
@@ -511,7 +553,7 @@ double AlbumWidget::getScaleValue(QSize img, QSize view)
 
 int AlbumWidget::updateUI()
 {
-    imgList.clear();
+    files.clear();
     pListShow->clear();
 
     // 判断路径是否存在
@@ -523,11 +565,11 @@ int AlbumWidget::updateUI()
     dir.setFilter(QDir::Files | QDir::NoSymLinks);
     filters << "*.png" << "*.jpg" <<"*.bmp";
     dir.setNameFilters(filters);
-    imgList = dir.entryList();
+    files = dir.entryList();
 
     // 创建单元项
-    for (int i = 0; i<imgList.count(); ++i) {
-        QPixmap pixmap(ALBUM_PATH + imgList.at(i));
+    for (int i = 0; i<files.count(); ++i) {
+        QPixmap pixmap(ALBUM_PATH + files.at(i));
         QListWidgetItem *listWidgetItem = new QListWidgetItem(QIcon(pixmap.scaled(IMAGE_SIZE)), NULL);  //delete name display
         listWidgetItem->setSizeHint(ITEM_SIZE);
         pListShow->insertItem(i, listWidgetItem);
@@ -536,6 +578,27 @@ int AlbumWidget::updateUI()
         pListShow->setCurrentRow(0);//默认光标在第一个
     }
     return 0;
+}
+
+QImage AlbumWidget::loadImage(const QString &fileName)
+{
+    QImageReader reader(fileName);
+    reader.setAutoTransform(true);
+//    qDebug() << "loading" << QDir::toNativeSeparators(fileName) << position << '/' << files.size();
+    if (!reader.canRead()) {
+//        qDebug() << QDir::toNativeSeparators(fileName) << ": can't load image";
+        return QImage();
+    }
+
+    QImage image;
+    if (!reader.read(&image)) {
+//        qDebug() << QDir::toNativeSeparators(fileName) << ": corrupted image: " << reader.errorString();
+        return QImage();
+    }
+    const QSize maximumSize(2000, 2000); // Reduce in case someone has large photo images.
+    if (image.size().width() > maximumSize.width() || image.height() > maximumSize.height())
+        image = image.scaled(maximumSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    return image;
 }
 
 // 全屏等比例显示图像
@@ -636,17 +699,25 @@ void AlbumWidget::panTriggered(QPanGesture *gesture) {
     }
 #endif
     QPointF delta = gesture->delta();
+    qDebug() << "panTriggered():" << gesture;
     horizontalOffset += delta.x();
     verticalOffset += delta.y();
     update();
-
 }
 
 void AlbumWidget::pinchTriggered(QPinchGesture *gesture)
 {
     QPinchGesture::ChangeFlags changeFlags = gesture->changeFlags();
+//    if (changeFlags & QPinchGesture::RotationAngleChanged) {
+//        qreal rotationDelta = gesture->rotationAngle() - gesture->lastRotationAngle();
+//        rotationAngle += rotationDelta;
+//        qDebug() << "pinchTriggered(): rotate by" <<
+//            rotationDelta << "->" << rotationAngle;
+//    }
     if (changeFlags & QPinchGesture::ScaleFactorChanged) {
         currentStepScaleFactor = gesture->totalScaleFactor();
+        qDebug() << "pinchTriggered(): zoom by" <<
+            gesture->scaleFactor() << "->" << currentStepScaleFactor;
     }
     if (gesture->state() == Qt::GestureFinished) {
         scaleFactor *= currentStepScaleFactor;
