@@ -77,7 +77,6 @@ protected:
     bool gestureEvent(QGestureEvent *event);
     bool event(QEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
-    void touchEvent(QEvent *event);
     bool backEvent();                                   //点击返回按钮式由派生类做判断，要不要返回
 
 private:
@@ -109,8 +108,6 @@ private:
     qreal currentStepScaleFactor;
 
     void setLabelMove(bool enable);
-    void zoomOut(void);     //缩小图片
-    void zoomIn(void);      //放大图片
     void goNextImage();
     void goPrevImage();
     void goToImage(int index);
@@ -127,7 +124,7 @@ private:
     QImage loadImage(const QString &fileName);
     void panTriggered(QPanGesture *gesture);
     void pinchTriggered(QPinchGesture *gesture);
-    void zoom(float scale);
+    void swipeTriggered(QSwipeGesture *gesture);
 
     QLabel *mShowWidget;                    // 图像显示窗口
     QPushButton *menuButton;
@@ -145,24 +142,24 @@ private:
     int position;
 };
 
-//class picListShow : public QListWidget{
-//    Q_OBJECT
-//public:
-//    explicit picListShow(QWidget *parent);
-//    ~picListShow();
-//    QList<QCheckBox*> *checkboxList;
+class picListShow : public QListWidget{
+    Q_OBJECT
+public:
+    explicit picListShow(QWidget *parent);
+    ~picListShow();
+    QList<QCheckBox*> *checkboxList;
 
-//protected:
-//    void mouseMoveEvent(QMouseEvent *event);
-//    void mousePressEvent(QMouseEvent *event);
-//    void mouseReleaseEvent(QMouseEvent *event);
+protected:
+    void mouseMoveEvent(QMouseEvent *event);
+    void mousePressEvent(QMouseEvent *event);
+    void mouseReleaseEvent(QMouseEvent *event);
 
-//private:
-//    int yPos0;
-//    int yPos1;
-//    int xPos0;
-//    int xPos1;
-//    QPoint slidePoint;
-//};
+private:
+    int yPos0;
+    int yPos1;
+    int xPos0;
+    int xPos1;
+    QPoint slidePoint;
+};
 
 #endif // AlbumWidget_H

@@ -5,7 +5,7 @@
 #-------------------------------------------------
 
 QT       += core gui
-VERSION = "v0.1.2"
+VERSION = "v0.1.3"
 #DEFINES += EY_Version
 CONFIG(QT_PC):DEFINES += QT_PC
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"

@@ -44,7 +44,7 @@ AlbumWidget::AlbumWidget(QWidget *parent)
     setGeometry(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     // QListWidget基本设置
-    pListShow = new QListWidget(this);
+    pListShow = new picListShow(this);
     pListShow->setGeometry(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     pListShow->setIconSize(IMAGE_SIZE);
     pListShow->setResizeMode(QListView::Adjust);
@@ -55,14 +55,17 @@ AlbumWidget::AlbumWidget(QWidget *parent)
     QScrollBar *scrollBar = pListShow->verticalScrollBar();
     pListShow->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     pListShow->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
-//    pListShow->setFocus();
+    pListShow->setFocus();
 
     updateUI();
     connect(pListShow, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(slot_itemClicked(QListWidgetItem*)));
 
     mShowWidget = new QLabel(this);
+
     menuButton = new QPushButton(this);
+    menuButton->hide();
     backButton   = new QPushButton(this);
+    backButton->hide();
 
     mShowWidget->setAutoFillBackground(true);
     mShowWidget->setGeometry(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);  //缓存两张图片
@@ -115,43 +118,32 @@ void AlbumWidget::mouseReleaseEvent(QMouseEvent *event)
     int yPos = m_mouseDstPos.y() - m_mouseSrcPos.y();
 
     if(!isZoomMode){
-//        if (mouseMove) {
-//            if((curIndex == 0) && (xPos > 0)){
-//                return;
-//            }else
-//            if((curIndex == pListShow->count() - 1) && (xPos < 0)){
-//                return;
-//            }
-
-//            if (xPos > 100) {                     //move right
-//                 curIndex --;
-//                 curPosX = -240;
-//            }else
-//            if(xPos < -100){
-//                 curIndex ++;
-//                 curPosX = 240;
-//            }
-
-//            mShowWidget->move(curPosX, 0);
-//            goToImage(curIndex);
-//            currentImage = loadImage(ALBUM_PATH + files.at(curIndex));
-//         }
-    }else{
-        if(isZoomMode){
-            if(isFirstDouble){
-                mShowWidget->resize(showPixmap.size());
-                mShowWidget->setPixmap(showPixmap);
-
-                if(curIndex == 0)
-                    mShowWidget->move(0, 0);
-                else
-                    mShowWidget->move(-240, 0);
-
-                mShowWidget->show();
-
-//                printf("Release isZoomMode, isFirstDouble, xPos = %d, yPos = %d, mShowWidget.x = %d, .y = %d\n",\
-//                                                   xPos,    yPos,   mShowWidget->x(),  mShowWidget->y());
-            }
+        if (mouseMove) {
+            if((curIndex == 0) && (xPos > 0))
+                return;
+            else
+            if((curIndex == pListShow->count() - 1) && (xPos < 0))
+                return;
+            if(xPos > 0)
+                curIndex --;
+            else
+                if(xPos < 0)
+                    curIndex ++;
+            goToImage(curIndex);
+        }
+    }else{  //缩放模式下，当前缩放比例为1时，允许左右切换
+        if(currentStepScaleFactor == 1){
+            if((curIndex == 0) && (xPos > 0))
+                return;
+            else
+            if((curIndex == pListShow->count() - 1) && (xPos < 0))
+                return;
+            if(xPos > 0)
+                curIndex --;
+            else
+                if(xPos < 0)
+                    curIndex ++;
+            goToImage(curIndex);
         }
     }
 }
@@ -162,146 +154,74 @@ void AlbumWidget::mouseMoveEvent(QMouseEvent *event)
     m_mouseDstPos = event->pos();
 
     int xPos = m_mouseDstPos.x() - m_mouseSrcPos.x();
+    int yPos = m_mouseDstPos.y() - m_mouseSrcPos.y();
 
-    if(!isZoomMode){
-        if((curIndex == 0) && (xPos > 0)){
-            xPos = 0;
-            curPosX = 0;
-        }else
-        if((curIndex == pListShow->count() - 1) && (xPos < 0)){
-            xPos = 0;
-            curPosX = 0;
-        }else
-            if(xPos > 0)
-                goToImage(curIndex + 1);
-        else
-                goToImage(curIndex - 1);
+//    if(isZoomMode){
+//        int yPos = m_mouseDstPos.y() - m_mouseSrcPos.y();
 
-//        if(curIndex == 0)
-//            mShowWidget->move(xPos, 0);
-//        else
-//            mShowWidget->move(xPos - 240, 0);
+//        double w = cenPixW * zoomScale;
+//        double h = cenPixH * zoomScale;
 
-    }else{
-        int yPos = m_mouseDstPos.y() - m_mouseSrcPos.y();
+//        if(xPos < 0){    //to left
+//            if(xPos < (240 - w))    //单次向左滑动到达右边界时，禁止继续滑动
+//                xPos = 240 - w;
 
-        double w = cenPixW * zoomScale;
-        double h = cenPixH * zoomScale;
+//            if(mShowWidget->x() < (240 - w)){    //向左滑动到达图像右边界时，停止滑动
+//                    xPosLast = 0;
+//                    return;
+//            }
+//        }else
+//            if(xPos > 0){//to right
+//                if(mShowWidget->x() >= 0){ //向右滑动，图片到达左边界，禁止继续滑动
+//                    xPosLast = 0;
+//                    xPos = 0;
+//                }
+//            }
 
-        if(xPos < 0){    //to left
-            if(xPos < (240 - w))    //单次向左滑动到达右边界时，禁止继续滑动
-                xPos = 240 - w;
+//        if(yPos < 0){   //to up
+//            if(yPos < (320 - h))    //向上滑动到达右边界时，禁止继续滑动
+//                yPos = 320 - h;
 
-            if(mShowWidget->x() < (240 - w)){    //向左滑动到达图像右边界时，停止滑动
-                    xPosLast = 0;
-                    return;
-            }
-        }else
-            if(xPos > 0){//to right
-                if(mShowWidget->x() >= 0){ //向右滑动，图片到达左边界，禁止继续滑动
-                    xPosLast = 0;
-                    xPos = 0;
-                }
-            }
+//            if(mShowWidget->y() < (320 - h)){    //向左滑动到达图像右边界时，停止滑动
+//                    yPosLast = 0;
+//                    return;
+//            }
+//        }else
+//            if(yPos > 0){//to down
+//                if(mShowWidget->y() >= 0){    //向下滑动，图片到达上边界，禁止继续滑动
+//                    yPosLast = 0;
+//                    yPos = 0;
+//                }
+//            }
 
-        if(yPos < 0){   //to up
-            if(yPos < (320 - h))    //向上滑动到达右边界时，禁止继续滑动
-                yPos = 320 - h;
-
-            if(mShowWidget->y() < (320 - h)){    //向左滑动到达图像右边界时，停止滑动
-                    yPosLast = 0;
-                    return;
-            }
-        }else
-            if(yPos > 0){//to down
-                if(mShowWidget->y() >= 0){    //向下滑动，图片到达上边界，禁止继续滑动
-                    yPosLast = 0;
-                    yPos = 0;
-                }
-            }
-
-        mShowWidget->move(xPos + xPosLast, yPos + yPosLast);
-        mShowWidget->show();
-
-//        printf("Move isZoomMode, isFirstDouble, xPos = %d, yPos = %d, mShowWidget.x = %d, .y = %d, xPosLast = %d, yPosLast = %d\n",\
-//                                           xPos,    yPos,   mShowWidget->x(),  mShowWidget->y(), xPosLast, yPosLast);
-    }
+//        mShowWidget->move(xPos + xPosLast, yPos + yPosLast);
+//        mShowWidget->show();
+//    }
 }
 
 void AlbumWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
     QSize screenSize(this->width(),this->height());
-    QSize cenPicSize(cenPixW, cenPixH);
+    QSize cenPicSize(currentImage.width(), currentImage.height());
 
     if(isSingleItemUI){                 //判断当前是否查看图像界面 查看图像界面/缩略图界面
         if(isFirstDouble){              //第一次双击，放大到填充屏幕
             qDebug() << "first double click!!";
-            qDebug() << "cenPixmap.w = " << cenPixmap.width() << "cenPixmap.h = " << cenPixmap.height();
-
             isZoomMode = true;
             isFirstDouble = false;
-
-            xPosLast = 0;
-            yPosLast = 0;
-
-            zoomScale = getScaleValue(cenPicSize, screenSize);
-
-            double w = cenPixW * zoomScale;
-            double h = cenPixH * zoomScale;
-
-            mShowWidget->close();
-            mShowWidget->setPixmap(cenPixmap.scaled(w, h, Qt::KeepAspectRatio));   //按比例缩放到(w, h)大小
-//            mShowWidget->resize(w, h);
-
-            QPoint clickP = event->pos();
-            qDebug() << "click x = " << clickP.x() << " y = " << clickP.y();
-            //需要以双击位置为中心点放大  偏移量计算
-            double offsetX =clickP.x() * zoomScale - SCREEN_WIDTH/2;
-            double offsetY =clickP.y() * zoomScale - SCREEN_HEIGHT/2;
-
-            //修正上界
-            if(clickP.x() < SCREEN_WIDTH/2 ){
-                offsetX = 0;
-            }
-
-            if(clickP.y() < SCREEN_HEIGHT/2 ){
-                offsetY = 0;
-            }
-
-            //修正下界
-            if( w - clickP.x() * zoomScale < SCREEN_WIDTH/2){
-                offsetX = w - SCREEN_WIDTH;
-            }
-            if( h - clickP.y() * zoomScale < SCREEN_HEIGHT/2){
-                offsetY = h - SCREEN_HEIGHT;
-            }
-
-            if(fabs(SCREEN_WIDTH - w)< 10){
-                offsetX = 0;
-            }
-            if(fabs(SCREEN_HEIGHT - h)<10){
-                offsetY = 0;
-            }
-
-            qDebug() << "offsetX x = " << offsetX << " y = " << offsetY;
-
-            if(offsetX > 120)   //consider to optimize
-                offsetX = 0;
-            mShowWidget->move(-offsetX, -offsetY);
-            mShowWidget->show();
+            scaleFactor = getScaleValue(cenPicSize, screenSize);
+            horizontalOffset = (SCREEN_WIDTH / 2 - event->x()) / 2;
+            verticalOffset   = (SCREEN_HEIGHT / 2 - event->y()) / 2;
+            update();
             return;
         }else{   //第二次双击，返回slot_itemClicked
             qDebug() << "second double click!!!";
-            qDebug() << "cenPixmap.w = " << cenPixmap.width() << "cenPixmap.h = " << cenPixmap.height();
-
             isFirstDouble = true;
             isZoomMode = false;
-
-            mShowWidget->close();
-            mShowWidget->setPixmap(cenPixmap.scaled(SCREEN_WIDTH, SCREEN_HEIGHT, Qt::KeepAspectRatio));   //按比例缩放到(w, h)大小
-            qDebug() << "cenPixmap.w = " << cenPixmap.width() << "cenPixmap.h = " << cenPixmap.height();
-            mShowWidget->show();
-
+            scaleFactor = 1;
+            horizontalOffset = 0;
+            verticalOffset = 0;
+            update();
             return;
         }
     }
@@ -315,13 +235,15 @@ void AlbumWidget::keyReleaseEvent(QKeyEvent *event)
 
     if(isSingleItemUI){
         switch (event->key()){
+            case KEY_UP:
+                curIndex -= 2;
+            case KEY_DOWN:
+                curIndex += 2;
             case KEY_LEFT:
-                pListShow->setCurrentRow(curIndex - 1);
-                slot_itemClicked(pListShow->currentItem());
+                curIndex --;
             break;
             case KEY_RIGHT:
-                pListShow->setCurrentRow(curIndex + 1);
-                slot_itemClicked(pListShow->currentItem());
+                curIndex ++;
             break;
             case KEY_RETURN: //back to list
                 back2Album();
@@ -329,12 +251,23 @@ void AlbumWidget::keyReleaseEvent(QKeyEvent *event)
             default:
                 break;
         }
-    }else{
+
+        if(curIndex < 0)
+            curIndex = 0;
+        if(curIndex > (files.count() - 1))
+            curIndex = files.count() - 1;
+
+        pListShow->setCurrentRow(curIndex);
+        goToImage(curIndex);
+
+    }else{  //on image list
         curIndex = pListShow->currentRow();
         pListShow->setCurrentRow(curIndex);
+
         switch (event->key()){
             case KEY_ENTER:
                 slot_itemClicked(pListShow->currentItem());
+            break;
             default:
                 break;
         }
@@ -343,15 +276,74 @@ void AlbumWidget::keyReleaseEvent(QKeyEvent *event)
 
 bool AlbumWidget::gestureEvent(QGestureEvent *event){
     printf(__FUNCTION__);
-//    qDebug()<<__FUNCTION__<<" event->type() = "<<event->type()<<endl;
-    if (QGesture *pan = event->gesture(Qt::PanGesture)){
+    if (QGesture *swipe = event->gesture(Qt::SwipeGesture))
+        swipeTriggered(static_cast<QSwipeGesture *>(swipe));
+    else if (QGesture *pan = event->gesture(Qt::PanGesture))
         panTriggered(static_cast<QPanGesture *>(pan));
-    }
-    if (QGesture *pinch = event->gesture(Qt::PinchGesture)){
+    if (QGesture *pinch = event->gesture(Qt::PinchGesture))
         pinchTriggered(static_cast<QPinchGesture *>(pinch));
-    }
     return true;
 }
+
+
+void AlbumWidget::panTriggered(QPanGesture *gesture) {
+#ifndef QT_NO_CURSOR
+    switch (gesture->state()) {
+    case Qt::GestureStarted:
+    case Qt::GestureUpdated:
+        setCursor(Qt::SizeAllCursor);
+        break;
+    default:
+        setCursor(Qt::ArrowCursor);
+    }
+#endif
+    QPointF delta = gesture->delta();
+    qDebug() << "panTriggered():" << gesture;
+    horizontalOffset += delta.x();
+    verticalOffset += delta.y();
+    update();
+}
+
+void AlbumWidget::pinchTriggered(QPinchGesture *gesture)
+{
+    QPinchGesture::ChangeFlags changeFlags = gesture->changeFlags();
+//    if (changeFlags & QPinchGesture::RotationAngleChanged) {
+//        qreal rotationDelta = gesture->rotationAngle() - gesture->lastRotationAngle();
+//        rotationAngle += rotationDelta;
+//        qDebug() << "pinchTriggered(): rotate by" <<
+//            rotationDelta << "->" << rotationAngle;
+//    }
+    if (changeFlags & QPinchGesture::ScaleFactorChanged) {
+        currentStepScaleFactor = gesture->totalScaleFactor();
+        qDebug() << "pinchTriggered(): zoom by" <<
+            gesture->scaleFactor() << "->" << currentStepScaleFactor;
+        printf("pinchTriggered  zoom by %0.2f -> %0.2f \n", gesture->scaleFactor(),currentStepScaleFactor);
+    }
+    if (gesture->state() == Qt::GestureFinished) {
+        scaleFactor *= currentStepScaleFactor;
+        currentStepScaleFactor = 1;
+    }
+    update();
+}
+
+//! [swipe function]
+void AlbumWidget::swipeTriggered(QSwipeGesture *gesture)
+{
+    if (gesture->state() == Qt::GestureFinished) {
+        if (gesture->horizontalDirection() == QSwipeGesture::Left
+            || gesture->verticalDirection() == QSwipeGesture::Up) {
+//            qCDebug(lcExample) << "swipeTriggered(): swipe to previous";
+            goPrevImage();
+            printf("swipe to previous\n");
+        } else {
+//            qCDebug(lcExample) << "swipeTriggered(): swipe to next";
+            goNextImage();
+            printf("swipe to next\n");
+        }
+        update();
+    }
+}
+//! [swipe function]
 
 bool AlbumWidget::event(QEvent *event)
 {
@@ -380,24 +372,6 @@ void AlbumWidget::paintEvent(QPaintEvent *event)
     p.drawImage(0, 0, currentImage);
 }
 
-void AlbumWidget::touchEvent(QEvent *event)
-{
-    switch (event->type())
-      {
-        case QEvent::TouchBegin:
-            //ui->FFLabel[1]->setText("Event began.");
-            break;
-        case QEvent::TouchEnd:
-            //ui->FFLabel[1]->setText("Event ended.");
-            break;
-        case QEvent::TouchUpdate:
-        {
-            //ui->FFLabel[1]->setText("Event updated.");
-            break;
-        }
-      }
-}
-
 bool AlbumWidget::backEvent()
 {
     if(isSingleItemUI){
@@ -408,48 +382,6 @@ bool AlbumWidget::backEvent()
         return true;
 }
 
-//bool AlbumWidget::event(QEvent *event)
-//{
-//    switch (event->type()) {
-//    case QEvent::TouchBegin:
-//    {
-//        QTouchEvent *touchEvent = static_cast<QTouchEvent *>(event);
-//        QList<QTouchEvent::TouchPoint> touchPoints = touchEvent->touchPoints();
-//        if(touchPoints.count() == 2){
-//            printf("TouchBegin   OOOOOOOOOOOOOOO");
-//        }
-//        return true;
-//    }
-//    case QEvent::TouchUpdate:
-//    {
-//        QTouchEvent *touchEvent = static_cast<QTouchEvent *>(event);
-//        QList<QTouchEvent::TouchPoint> touchPoints = touchEvent->touchPoints();
-//        if(touchPoints.count() == 2){
-//            printf("TouchUpdate   KKKKKKKKKKKKKKK");
-//        }
-//        return true;
-//    }
-//    case QEvent::TouchEnd:
-//    {
-//        qDebug() <<"CProjectionPicture::event";
-//        QTouchEvent *touchEvent = static_cast<QTouchEvent *>(event);
-//        QList<QTouchEvent::TouchPoint> touchPoints = touchEvent->touchPoints();
-//        if(touchPoints.count() == 2){
-//            printf("TouchEnd   KKKKKKKKKKKKKKK");
-//        }
-//        else if(touchPoints.count() == 1){
-//            //m_bIsTwoPoint = false;
-//        }
-//        return true;
-//    }
-//    default:
-//        break;
-//    }
-
-//    return QWidget::event(event);
-//}
-
-
 //gesturestart      // 当有两根或多根手指放到屏幕上的时候触发
 //gesturechange     // 当有两根或多根手指在屏幕上，并且有手指移动的时候触发
 //gestureend        // 当倒数第二根手指提起的时候触发，结束gesture
@@ -457,16 +389,6 @@ bool AlbumWidget::backEvent()
 void AlbumWidget::setLabelMove(bool enable)
 {
     label_move = enable;
-}
-
-void AlbumWidget::zoomOut()
-{
-
-}
-
-void AlbumWidget::zoomIn()
-{
-
 }
 
 void AlbumWidget::goNextImage()
@@ -596,7 +518,7 @@ int AlbumWidget::updateUI()
         pListShow->setCurrentRow(0);//默认光标在第一个
     }
 
-    goToImage(0);
+//    goToImage(0);
     return 0;
 }
 
@@ -615,7 +537,7 @@ QImage AlbumWidget::loadImage(const QString &fileName)
 //        qDebug() << QDir::toNativeSeparators(fileName) << ": corrupted image: " << reader.errorString();
         return QImage();
     }
-    const QSize maximumSize(2000, 2000); // Reduce in case someone has large photo images.
+    const QSize maximumSize(240, 320); // Reduce in case someone has large photo images.
     if (image.size().width() > maximumSize.width() || image.height() > maximumSize.height())
         image = image.scaled(maximumSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     return image;
@@ -623,23 +545,24 @@ QImage AlbumWidget::loadImage(const QString &fileName)
 
 // 全屏等比例显示图像
 void AlbumWidget::slot_itemClicked(QListWidgetItem * item){
-//    qDebug() << "slot_itemClicked, item index= " << pListShow->row(item) << "count = " << pListShow->count();
+
     isSingleItemUI = true;
+    pListShow->hide();
 
     curIndex = pListShow->row(item);
     goToImage(curIndex);
 
-    //menu button
-    menuButton->setText("菜单");
-    menuButton->setGeometry(210, 300, 30, 20);
-    connect(menuButton, SIGNAL(clicked()), this, SLOT(menuView()));
+//    //menu button
+//    menuButton->setText("菜单");
+//    menuButton->setGeometry(210, 300, 30, 20);
+//    menuButton->raise();
+//    connect(menuButton, SIGNAL(clicked()), this, SLOT(menuView()));
 
-    //back button
-    backButton->setText("返回");
-    backButton->setGeometry(0, 300, 30, 20);
-    connect(backButton, SIGNAL(clicked()), this, SLOT(back2Album()));
-
-    mShowWidget->show();
+//    //back button
+//    backButton->setText("返回");
+//    backButton->setGeometry(0, 300, 30, 20);
+//    backButton->raise();
+//    connect(backButton, SIGNAL(clicked()), this, SLOT(back2Album()));
 }
 
 void AlbumWidget::menuView(void){
@@ -662,101 +585,43 @@ void AlbumWidget::back2Album(void){
     this->show();
 }
 
-
-//picListShow::picListShow(QWidget *parent)
-//{
-//    this->setParent(parent);
-//}
-
-//picListShow::~picListShow()
-//{
-
-//}
-
-//void picListShow::mouseMoveEvent(QMouseEvent *event)
-//{
-//    if(!slidePoint.isNull()){
-//        bool direction = (slidePoint.y() < event->pos().y());
-//        int singleStep = (direction ? -4 : 4);
-//        this->verticalScrollBar()->setValue(verticalScrollBar()->value() + singleStep);
-//    }
-//}
-
-//void picListShow::mousePressEvent(QMouseEvent *event)
-//{
-//    if(event->button() == Qt::LeftButton){
-//        slidePoint = event->pos();
-//        yPos0 = slidePoint.x();
-//    }
-//    QListWidget::mousePressEvent(event);
-//}
-
-//void picListShow::mouseReleaseEvent(QMouseEvent *event)
-//{
-//    QPoint EndPoint;
-//    EndPoint = event->pos();
-////    if(EndPoint == slidePoint)
-////        itemClicked(this->selectedItems().at(0));   //    //sent itemClicked signal to ImageView
-////    else
-////        slidePoint = QPoint();  //resets the scroll drag
-
-
-//    QListWidget::mouseReleaseEvent(event);
-//}
-
-
-
-
-void AlbumWidget::panTriggered(QPanGesture *gesture) {
-#ifndef QT_NO_CURSOR
-    switch (gesture->state()) {
-    case Qt::GestureStarted:
-    case Qt::GestureUpdated:
-        setCursor(Qt::SizeAllCursor);
-        break;
-    default:
-        setCursor(Qt::ArrowCursor);
-    }
-#endif
-    QPointF delta = gesture->delta();
-    qDebug() << "panTriggered():" << gesture;
-    horizontalOffset += delta.x();
-    verticalOffset += delta.y();
-    update();
-}
-
-void AlbumWidget::pinchTriggered(QPinchGesture *gesture)
+picListShow::picListShow(QWidget *parent)
 {
-    QPinchGesture::ChangeFlags changeFlags = gesture->changeFlags();
-//    if (changeFlags & QPinchGesture::RotationAngleChanged) {
-//        qreal rotationDelta = gesture->rotationAngle() - gesture->lastRotationAngle();
-//        rotationAngle += rotationDelta;
-//        qDebug() << "pinchTriggered(): rotate by" <<
-//            rotationDelta << "->" << rotationAngle;
-//    }
-    if (changeFlags & QPinchGesture::ScaleFactorChanged) {
-        currentStepScaleFactor = gesture->totalScaleFactor();
-        qDebug() << "pinchTriggered(): zoom by" <<
-            gesture->scaleFactor() << "->" << currentStepScaleFactor;
-    }
-    if (gesture->state() == Qt::GestureFinished) {
-        scaleFactor *= currentStepScaleFactor;
-        currentStepScaleFactor = 1;
-    }
-    update();
+    this->setParent(parent);
 }
 
-// 缩放 - scaleFactor：缩放的比例因子
-void AlbumWidget::zoom(float scale)
+picListShow::~picListShow()
 {
-    scaleFactor *= scale;
-    update();
+
 }
 
+void picListShow::mouseMoveEvent(QMouseEvent *event)
+{
+    if(!slidePoint.isNull()){
+        bool direction = (slidePoint.y() < event->pos().y());
+        int singleStep = (direction ? -4 : 4);
+        this->verticalScrollBar()->setValue(verticalScrollBar()->value() + singleStep);
+    }
+}
+
+void picListShow::mousePressEvent(QMouseEvent *event)
+{
+    if(event->button() == Qt::LeftButton){
+        slidePoint = event->pos();
+        yPos0 = slidePoint.x();
+    }
+    QListWidget::mousePressEvent(event);
+}
+
+void picListShow::mouseReleaseEvent(QMouseEvent *event)
+{
+    QPoint EndPoint;
+    EndPoint = event->pos();
+//    if(EndPoint == slidePoint)
+//        itemClicked(this->selectedItems().at(0));   //    //sent itemClicked signal to ImageView
+//    else
+//        slidePoint = QPoint();  //resets the scroll drag
 
 
-
-
-
-
-
+    QListWidget::mouseReleaseEvent(event);
+}
