@@ -78,6 +78,14 @@ AlbumWidget::~AlbumWidget(){
 
 }
 
+void AlbumWidget::grabGestures(const QList<Qt::GestureType> &gestures)
+{
+    //! [enable gestures]
+    foreach (Qt::GestureType gesture, gestures)
+        grabGesture(gesture);
+    //! [enable gestures]
+}
+
 void AlbumWidget::albumMenuSlot(int idx){
     printf("menu idx = %d", idx);
 //    if(idx == 0)
@@ -99,8 +107,8 @@ void AlbumWidget::mousePressEvent(QMouseEvent *event)
     mousePress = true;
     m_mouseSrcPos = event->pos();
 
-    xPosLast = mShowWidget->x();
-    yPosLast = mShowWidget->y();
+//    xPosLast = mShowWidget->x();
+//    yPosLast = mShowWidget->y();
 
 //    if((m_mouseSrcPos.y() > SCREEN_HEIGHT-STATUS_BAR_HEIGHT) && (m_mouseSrcPos.x() > SCREEN_WIDTH-STATUS_BAR_HEIGHT)){
 //        printf("clicked Menu!");
@@ -124,10 +132,10 @@ void AlbumWidget::mouseReleaseEvent(QMouseEvent *event)
             else
             if((curIndex == pListShow->count() - 1) && (xPos < 0))
                 return;
-            if(xPos > 0)
+            if(xPos > 30)   //30 is max tolerate distance for double press
                 curIndex --;
             else
-                if(xPos < 0)
+                if(xPos < -30)
                     curIndex ++;
             goToImage(curIndex);
         }
@@ -138,10 +146,10 @@ void AlbumWidget::mouseReleaseEvent(QMouseEvent *event)
             else
             if((curIndex == pListShow->count() - 1) && (xPos < 0))
                 return;
-            if(xPos > 0)
+            if(xPos > 30)   //30 is max tolerate distance to load next img
                 curIndex --;
             else
-                if(xPos < 0)
+                if(xPos < -30)
                     curIndex ++;
             goToImage(curIndex);
         }
@@ -237,16 +245,29 @@ void AlbumWidget::keyReleaseEvent(QKeyEvent *event)
         switch (event->key()){
             case KEY_UP:
                 curIndex -= 2;
+                scaleFactor = 1;
             case KEY_DOWN:
                 curIndex += 2;
+                scaleFactor = 1;
             case KEY_LEFT:
                 curIndex --;
+                scaleFactor = 1;
             break;
             case KEY_RIGHT:
                 curIndex ++;
+                scaleFactor = 1;
             break;
             case KEY_RETURN: //back to list
                 back2Album();
+            break;
+            case KEY_ENLARGE:{
+                    QSize screenSize(this->width(),this->height());
+                    QSize cenPicSize(currentImage.width(), currentImage.height());
+                    scaleFactor = getScaleValue(cenPicSize, screenSize);
+                }
+            break;
+            case KEY_NARROW:
+                scaleFactor = 1;
             break;
             default:
                 break;
@@ -275,11 +296,12 @@ void AlbumWidget::keyReleaseEvent(QKeyEvent *event)
 }
 
 bool AlbumWidget::gestureEvent(QGestureEvent *event){
-    printf(__FUNCTION__);
+    printf("gestureEvent\n");
+
     if (QGesture *swipe = event->gesture(Qt::SwipeGesture))
         swipeTriggered(static_cast<QSwipeGesture *>(swipe));
-    else if (QGesture *pan = event->gesture(Qt::PanGesture))
-        panTriggered(static_cast<QPanGesture *>(pan));
+//    else if (QGesture *pan = event->gesture(Qt::PanGesture))
+//        panTriggered(static_cast<QPanGesture *>(pan));
     if (QGesture *pinch = event->gesture(Qt::PinchGesture))
         pinchTriggered(static_cast<QPinchGesture *>(pinch));
     return true;
@@ -298,7 +320,7 @@ void AlbumWidget::panTriggered(QPanGesture *gesture) {
     }
 #endif
     QPointF delta = gesture->delta();
-    qDebug() << "panTriggered():" << gesture;
+//    qDebug() << "panTriggered():" << gesture;
     horizontalOffset += delta.x();
     verticalOffset += delta.y();
     update();
@@ -315,11 +337,13 @@ void AlbumWidget::pinchTriggered(QPinchGesture *gesture)
 //    }
     if (changeFlags & QPinchGesture::ScaleFactorChanged) {
         currentStepScaleFactor = gesture->totalScaleFactor();
-        qDebug() << "pinchTriggered(): zoom by" <<
-            gesture->scaleFactor() << "->" << currentStepScaleFactor;
-        printf("pinchTriggered  zoom by %0.2f -> %0.2f \n", gesture->scaleFactor(),currentStepScaleFactor);
+//        qDebug() << "pinchTriggered(): zoom by" <<
+//            gesture->scaleFactor() << "->" << currentStepScaleFactor;
+//        printf("pinchTriggered  zoom by %0.2f -> %0.2f \n", gesture->scaleFactor(),currentStepScaleFactor);
     }
     if (gesture->state() == Qt::GestureFinished) {
+        if(currentStepScaleFactor < 1)
+            currentStepScaleFactor = 1;
         scaleFactor *= currentStepScaleFactor;
         currentStepScaleFactor = 1;
     }
@@ -545,6 +569,11 @@ QImage AlbumWidget::loadImage(const QString &fileName)
 
 // 全屏等比例显示图像
 void AlbumWidget::slot_itemClicked(QListWidgetItem * item){
+
+    horizontalOffset        =   0;
+    verticalOffset          =   0;
+    scaleFactor             =   1;
+    currentStepScaleFactor  =   1;
 
     isSingleItemUI = true;
     pListShow->hide();

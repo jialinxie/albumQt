@@ -1,7 +1,8 @@
-﻿#include "mainwindow.h"
+﻿#include "mainwidget.h"
 #include <QApplication>
 #include <albumwidget.h>
 #include <QCommandLineParser>
+#include <QtWidgets>
 
 int main(int argc, char *argv[])
 {
@@ -19,7 +20,14 @@ int main(int argc, char *argv[])
         }
     }
 
-    AlbumWidget *imageListVew = new AlbumWidget();
-    imageListVew->show();
+    QList<Qt::GestureType> gestures;
+    gestures << Qt::PanGesture;
+    gestures << Qt::PinchGesture;
+    gestures << Qt::SwipeGesture;
+
+    MainWidget w;
+    w.grabGestures(gestures);
+    w.show();
+
     return a.exec();
 }

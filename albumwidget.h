@@ -5,7 +5,7 @@
 #include <QtWidgets/QWidget>
 #include <QLabel>
 #include <QPushButton>
-#include <mainwindow.h>
+#include <mainwidget.h>
 #include <QPoint>
 #include <QListWidget>
 
@@ -39,14 +39,14 @@
 #define KEY_ENLARGE                Qt::Key_Plus
 #define KEY_NARROW                 Qt::Key_Minus
 #else
-#define KEY_UP                     Qt::Key_F1
-#define KEY_LEFT                   Qt::Key_F2
-#define KEY_RIGHT                  Qt::Key_F3
-#define KEY_DOWN                   Qt::Key_F4
+#define KEY_UP                     Qt::Key_Up
+#define KEY_LEFT                   Qt::Key_Left
+#define KEY_RIGHT                  Qt::Key_Right
+#define KEY_DOWN                   Qt::Key_Down
 #define KEY_ENTER                  Qt::Key_F12
 #define KEY_RETURN                 Qt::Key_F6
 #define KEY_SERACH                 Qt::Key_F10
-#define KEY_PICKPOINT           Qt::Key_F11
+#define KEY_PICKPOINT              Qt::Key_F11
 #define KEY_SHUTDOWN               Qt::Key_PowerOff//Qt::Key_PowerOff
 #define KEY_MENU                   Qt::Key_F5
 #define KEY_ENLARGE                Qt::Key_F7
@@ -66,6 +66,7 @@ class AlbumWidget : public QWidget
 public:
     AlbumWidget(QWidget *parent = 0);
     ~AlbumWidget();
+    void grabGestures(const QList<Qt::GestureType> &gestures);
 
 protected:
     void focusInEvent(QFocusEvent *e);

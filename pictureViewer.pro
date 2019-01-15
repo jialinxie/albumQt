@@ -5,7 +5,7 @@
 #-------------------------------------------------
 
 QT       += core gui
-VERSION = "v0.1.3"
+VERSION = "v0.2.0"
 #DEFINES += EY_Version
 CONFIG(QT_PC):DEFINES += QT_PC
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
@@ -28,12 +28,12 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
-        mainwindow.cpp \
-    albumwidget.cpp
+    albumwidget.cpp \
+    mainwidget.cpp
 
 HEADERS += \
-        mainwindow.h \
-    albumwidget.h
+    albumwidget.h \
+    mainwidget.h
 
 CONFIG += console
 
