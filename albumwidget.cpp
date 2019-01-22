@@ -16,7 +16,7 @@
 #include <QtMath>
 #include <qnamespace.h>
 
-#define PICVIEWSIZE 78
+#define PICVIEWSIZE 77
 
 AlbumWidget::AlbumWidget(QWidget *parent)
     : QWidget(parent)
@@ -45,12 +45,12 @@ AlbumWidget::AlbumWidget(QWidget *parent)
 
     // QListWidget基本设置
     pListShow = new picListShow(this);
-    pListShow->setGeometry(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    pListShow->setGeometry(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT - 30);
     pListShow->setIconSize(IMAGE_SIZE);
     pListShow->setResizeMode(QListView::Adjust);
     pListShow->setViewMode(QListView::IconMode);
     pListShow->setMovement(QListView::Static);
-    pListShow->setSpacing(0);
+    pListShow->setSpacing(1);
 
     QScrollBar *scrollBar = pListShow->verticalScrollBar();
     pListShow->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -132,10 +132,10 @@ void AlbumWidget::mouseReleaseEvent(QMouseEvent *event)
             else
             if((curIndex == pListShow->count() - 1) && (xPos < 0))
                 return;
-            if(xPos > 30)   //30 is max tolerate distance for double press
+            if(xPos > 100)   //100 is max tolerate distance for double press
                 curIndex --;
             else
-                if(xPos < -30)
+                if(xPos < -100)
                     curIndex ++;
             goToImage(curIndex);
         }
@@ -246,9 +246,11 @@ void AlbumWidget::keyReleaseEvent(QKeyEvent *event)
             case KEY_UP:
                 curIndex -= 2;
                 scaleFactor = 1;
+            break;
             case KEY_DOWN:
                 curIndex += 2;
                 scaleFactor = 1;
+            break;
             case KEY_LEFT:
                 curIndex --;
                 scaleFactor = 1;
@@ -296,12 +298,10 @@ void AlbumWidget::keyReleaseEvent(QKeyEvent *event)
 }
 
 bool AlbumWidget::gestureEvent(QGestureEvent *event){
-    printf("gestureEvent\n");
-
     if (QGesture *swipe = event->gesture(Qt::SwipeGesture))
         swipeTriggered(static_cast<QSwipeGesture *>(swipe));
-//    else if (QGesture *pan = event->gesture(Qt::PanGesture))
-//        panTriggered(static_cast<QPanGesture *>(pan));
+    else if (QGesture *pan = event->gesture(Qt::PanGesture))
+        panTriggered(static_cast<QPanGesture *>(pan));
     if (QGesture *pinch = event->gesture(Qt::PinchGesture))
         pinchTriggered(static_cast<QPinchGesture *>(pinch));
     return true;
@@ -320,7 +320,6 @@ void AlbumWidget::panTriggered(QPanGesture *gesture) {
     }
 #endif
     QPointF delta = gesture->delta();
-//    qDebug() << "panTriggered():" << gesture;
     horizontalOffset += delta.x();
     verticalOffset += delta.y();
     update();
@@ -358,11 +357,11 @@ void AlbumWidget::swipeTriggered(QSwipeGesture *gesture)
             || gesture->verticalDirection() == QSwipeGesture::Up) {
 //            qCDebug(lcExample) << "swipeTriggered(): swipe to previous";
             goPrevImage();
-            printf("swipe to previous\n");
+//            printf("swipe to previous\n");
         } else {
 //            qCDebug(lcExample) << "swipeTriggered(): swipe to next";
             goNextImage();
-            printf("swipe to next\n");
+//            printf("swipe to next\n");
         }
         update();
     }
@@ -379,7 +378,7 @@ bool AlbumWidget::event(QEvent *event)
 
 void AlbumWidget::paintEvent(QPaintEvent *event)
 {
-    printf(__FUNCTION__);
+//    printf(__FUNCTION__);
 
     QPainter p(this);
 
@@ -514,6 +513,15 @@ double AlbumWidget::getScaleValue(QSize img, QSize view)
                         return 1/y;
                 }
 }
+/**
+ * @brief AlbumWidget::updateBufferByKey
+ * @param keyWay true:up false:down
+ * always load 4x4 images to buffer
+ */
+void AlbumWidget::updateBufferByKey(bool keyWay)
+{
+
+}
 
 int AlbumWidget::updateUI()
 {
@@ -521,7 +529,7 @@ int AlbumWidget::updateUI()
     pListShow->clear();
 
     // 判断路径是否存在
-    dir.setCurrent(ALBUM_PATH);
+    bool ret = dir.setCurrent(ALBUM_PATH);
     if (!dir.exists()) {
         return -1;
     }
@@ -539,10 +547,8 @@ int AlbumWidget::updateUI()
         pListShow->insertItem(i, listWidgetItem);
     }
     if(pListShow->count() > 0){
-        pListShow->setCurrentRow(0);//默认光标在第一个
+        pListShow->setCurrentRow(curIndex);//默认光标在第一个
     }
-
-//    goToImage(0);
     return 0;
 }
 
@@ -576,7 +582,8 @@ void AlbumWidget::slot_itemClicked(QListWidgetItem * item){
     currentStepScaleFactor  =   1;
 
     isSingleItemUI = true;
-    pListShow->hide();
+	pListShow->hide();
+    isFirstDouble = true;
 
     curIndex = pListShow->row(item);
     goToImage(curIndex);
@@ -608,13 +615,14 @@ void AlbumWidget::back2Album(void){
     //this->show();
     pListShow->show();
     if(pListShow->count() > 0){
-        pListShow->setCurrentRow(0);//默认光标在第一个
+        pListShow->setCurrentRow(curIndex);//默认光标在第一个
     }
-    printf("\nback2Album, count = %d\n", pListShow->count());
+//    printf("\nback2Album, count = %d\n", pListShow->count());
     this->show();
 }
 
-picListShow::picListShow(QWidget *parent)
+picListShow::picListShow(QWidget *parent):
+isMove(false)
 {
     this->setParent(parent);
 }
@@ -624,8 +632,19 @@ picListShow::~picListShow()
 
 }
 
+bool picListShow::MoveStatus()
+{
+    return isMove;
+}
+
+bool picListShow::setMoveStatus()
+{
+    isMove = false;
+}
+
 void picListShow::mouseMoveEvent(QMouseEvent *event)
 {
+    isMove = true;
     if(!slidePoint.isNull()){
         bool direction = (slidePoint.y() < event->pos().y());
         int singleStep = (direction ? -4 : 4);

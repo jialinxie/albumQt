@@ -113,6 +113,8 @@ private:
     void goPrevImage();
     void goToImage(int index);
     double getScaleValue(QSize img, QSize view);
+    void updateBufferByKey(bool keyWay);
+//    void updateBufferByMouse()
 
 private slots:
     void slot_itemClicked(QListWidgetItem*);
@@ -133,7 +135,7 @@ private:
     QPixmap cenPixmap;
     QPixmap showPixmap;
     QImage  cenImg;
-    QListWidget *pListShow;
+    picListShow *pListShow;
     QDir dir;
     QStringList filters;
     QSize IMAGE_SIZE;
@@ -148,8 +150,8 @@ class picListShow : public QListWidget{
 public:
     explicit picListShow(QWidget *parent);
     ~picListShow();
-    QList<QCheckBox*> *checkboxList;
-
+    bool MoveStatus();
+    bool setMoveStatus();
 protected:
     void mouseMoveEvent(QMouseEvent *event);
     void mousePressEvent(QMouseEvent *event);
@@ -160,6 +162,7 @@ private:
     int yPos1;
     int xPos0;
     int xPos1;
+    bool isMove;
     QPoint slidePoint;
 };
 
