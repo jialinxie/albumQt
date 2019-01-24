@@ -2,7 +2,9 @@
 #define MAINWIDGET_H
 
 #include <QMainWindow>
+#include "readimgthread.h"
 class AlbumWidget;
+class readImgThread;
 
 class MainWidget : public QMainWindow
 {
@@ -15,6 +17,7 @@ public:
 
 private:
     AlbumWidget *imageWidget;
+    readImgThread thread0;
 };
 
 #endif // MAINWIDGET_H

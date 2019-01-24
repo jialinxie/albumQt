@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     gestures << Qt::SwipeGesture;
 
     MainWidget w;
-    w.grabGestures(gestures);
+//    w.grabGestures(gestures);
     w.show();
 
     return a.exec();

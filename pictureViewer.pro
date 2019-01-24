@@ -11,7 +11,7 @@ CONFIG(QT_PC):DEFINES += QT_PC
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = pictureViewer
+TARGET = album
 TEMPLATE = app
 
 # The following define makes your compiler emit warnings if you use
@@ -29,11 +29,13 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
     albumwidget.cpp \
-    mainwidget.cpp
+    mainwidget.cpp \
+    readimgthread.cpp
 
 HEADERS += \
     albumwidget.h \
-    mainwidget.h
+    mainwidget.h \
+    readimgthread.h
 
 CONFIG += console
 

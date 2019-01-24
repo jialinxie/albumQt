@@ -15,8 +15,9 @@
 #include <QGestureEvent>
 #include <QtMath>
 #include <qnamespace.h>
-
+#include <QObject>
 #define PICVIEWSIZE 77
+
 
 AlbumWidget::AlbumWidget(QWidget *parent)
     : QWidget(parent)
@@ -57,7 +58,8 @@ AlbumWidget::AlbumWidget(QWidget *parent)
     pListShow->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     pListShow->setFocus();
 
-    updateUI();
+//    updateUI();
+
     connect(pListShow, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(slot_itemClicked(QListWidgetItem*)));
 
     mShowWidget = new QLabel(this);
@@ -72,6 +74,7 @@ AlbumWidget::AlbumWidget(QWidget *parent)
     mShowWidget->hide();
 
     setAttribute(Qt::WA_AcceptTouchEvents);
+    connect(pListShow, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(slot_itemClicked(QListWidgetItem*)));
 }
 
 AlbumWidget::~AlbumWidget(){
@@ -91,11 +94,17 @@ void AlbumWidget::albumMenuSlot(int idx){
 //    if(idx == 0)
 //        picPropertiles();
 //    else
-//        deleteCurrentPic();
+    //        deleteCurrentPic();
 }
 
+//void AlbumWidget::readImgCompleteSlot()
+//{
+//    qDebug() << "readImgComplete!!!!";
+//}
+
 void AlbumWidget::focusInEvent(QFocusEvent *){
-    int ret = updateUI();
+    qDebug() << __func__;
+//    int ret = updateUI();
 }
 
 void AlbumWidget::mousePressEvent(QMouseEvent *event)
@@ -549,6 +558,8 @@ int AlbumWidget::updateUI()
     if(pListShow->count() > 0){
         pListShow->setCurrentRow(curIndex);//默认光标在第一个
     }
+    pListShow->raise();
+    pListShow->show();
     return 0;
 }
 
@@ -625,6 +636,7 @@ picListShow::picListShow(QWidget *parent):
 isMove(false)
 {
     this->setParent(parent);
+    connect(&thread0, SIGNAL(sendReadImgComplete()), this, SLOT(readImgCompleteSlot()));
 }
 
 picListShow::~picListShow()
@@ -673,3 +685,17 @@ void picListShow::mouseReleaseEvent(QMouseEvent *event)
 
     QListWidget::mouseReleaseEvent(event);
 }
+
+void picListShow::focusInEvent(QFocusEvent *event)
+{
+    thread0.start();
+}
+
+void picListShow::readImgCompleteSlot()
+{
+    qDebug() << __func__;
+    thread0.stop();
+    bool ret0 = thread0.isRunning();
+    bool ret1 = thread0.isFinished();
+}
+

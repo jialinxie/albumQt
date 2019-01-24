@@ -6,7 +6,7 @@ MainWidget::MainWidget(QWidget *parent)
 {
     setGeometry(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    imageWidget = new AlbumWidget(this);
+    imageWidget = AlbumWidget::getInstance(this);
     imageWidget->show();
 }
 
@@ -17,5 +17,5 @@ MainWidget::~MainWidget()
 
 void MainWidget::grabGestures(const QList<Qt::GestureType> &gestures)
 {
-    imageWidget->grabGestures(gestures);
+//    imageWidget->grabGestures(gestures);
 }

@@ -13,9 +13,10 @@
 #include <QDir>
 #include <QImage>
 #include <QImageReader>
+#include "readimgthread.h"
 
 #ifdef QT_PC
-    #define ALBUM_PATH      "../Camera/"
+    #define ALBUM_PATH      "/Users/jack/Documents/Camera/"
 #else
     #define ALBUM_PATH      "/launcher/BHC_USER/Camera/"
 #endif
@@ -62,8 +63,14 @@ class QCheckBox;
 class AlbumWidget : public QWidget
 {
     Q_OBJECT
-
 public:
+    static AlbumWidget* getInstance(QWidget *parent){
+        static AlbumWidget *m_instance = new AlbumWidget(parent);
+        return m_instance;
+    }
+    int updateUI();
+
+private:
     AlbumWidget(QWidget *parent = 0);
     ~AlbumWidget();
     void grabGestures(const QList<Qt::GestureType> &gestures);
@@ -121,9 +128,9 @@ private slots:
     void menuView(void);
     void back2Album(void);
     void albumMenuSlot(int idx);
+//    void readImgCompleteSlot(void);
 
 private:
-    int updateUI();
     QImage loadImage(const QString &fileName);
     void panTriggered(QPanGesture *gesture);
     void pinchTriggered(QPinchGesture *gesture);
@@ -156,7 +163,7 @@ protected:
     void mouseMoveEvent(QMouseEvent *event);
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
-
+    void focusInEvent(QFocusEvent *event);
 private:
     int yPos0;
     int yPos1;
@@ -164,6 +171,11 @@ private:
     int xPos1;
     bool isMove;
     QPoint slidePoint;
+    readImgThread thread0;
+
+private slots:
+    void readImgCompleteSlot(void);
+
 };
 
 #endif // AlbumWidget_H
