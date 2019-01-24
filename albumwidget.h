@@ -16,7 +16,7 @@
 #include "readimgthread.h"
 
 #ifdef QT_PC
-    #define ALBUM_PATH      "/Users/jack/Documents/Camera/"
+    #define ALBUM_PATH      "../Camera/"
 #else
     #define ALBUM_PATH      "/launcher/BHC_USER/Camera/"
 #endif
