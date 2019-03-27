@@ -15,6 +15,10 @@
 #include <QImageReader>
 #include "readimgthread.h"
 
+//获取鼠标坐标函数分类，根据不同情况使用不同函数
+#define GET_POS_X                  QCursor::pos().x();//event->globalX()//
+#define GET_POS_Y                  QCursor::pos().y();//event->globalX()//
+
 #ifdef QT_PC
     #define ALBUM_PATH      "../Camera/"
 #else
@@ -105,12 +109,14 @@ private:
     double zoomScale;
     int xPosLast;
     int yPosLast;
+    int mTmpPosX;
+    int mTmpPosY;
 
     QImage prevImage, nextImage;
     QImage currentImage;
 
-    qreal horizontalOffset;
-    qreal verticalOffset;
+    int horizontalOffset;   //[-60 - 60]
+    int verticalOffset;
     qreal rotationAngle;
     qreal scaleFactor;
     qreal currentStepScaleFactor;
@@ -121,6 +127,7 @@ private:
     void goToImage(int index);
     double getScaleValue(QSize img, QSize view);
     void updateBufferByKey(bool keyWay);
+    void moveImgHandler(int direction, int horiz, int verti);
 //    void updateBufferByMouse()
 
 private slots:

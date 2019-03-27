@@ -16,6 +16,7 @@
 #include <QtMath>
 #include <qnamespace.h>
 #include <QObject>
+#include <assert.h>
 #define PICVIEWSIZE 77
 
 
@@ -26,7 +27,7 @@ AlbumWidget::AlbumWidget(QWidget *parent)
     , curIndex(0)
     , curPosX(-240)
     , isSingleItemUI(false)
-    , isFirstDouble(true)
+    , isFirstDouble(true) 
     , isZoomMode(false)
     , cenPixW(0)
     , cenPixH(0)
@@ -74,7 +75,6 @@ AlbumWidget::AlbumWidget(QWidget *parent)
     mShowWidget->hide();
 
     setAttribute(Qt::WA_AcceptTouchEvents);
-    connect(pListShow, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(slot_itemClicked(QListWidgetItem*)));
 }
 
 AlbumWidget::~AlbumWidget(){
@@ -105,6 +105,7 @@ void AlbumWidget::albumMenuSlot(int idx){
 void AlbumWidget::focusInEvent(QFocusEvent *){
     qDebug() << __func__;
 //    int ret = updateUI();
+	pListShow->setFocus();  //Response navigation key
 }
 
 void AlbumWidget::mousePressEvent(QMouseEvent *event)
@@ -167,68 +168,71 @@ void AlbumWidget::mouseReleaseEvent(QMouseEvent *event)
 
 void AlbumWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    mouseMove = true;
-    m_mouseDstPos = event->pos();
+    printf(__FUNCTION__);
+    printf("\n");
 
-    int xPos = m_mouseDstPos.x() - m_mouseSrcPos.x();
-    int yPos = m_mouseDstPos.y() - m_mouseSrcPos.y();
+    int posX = GET_POS_X;
+    int posY = GET_POS_Y;
+    static int sFosX = 0;
 
-//    if(isZoomMode){
-//        int yPos = m_mouseDstPos.y() - m_mouseSrcPos.y();
+    if(mTmpPosX == 0)
+        mTmpPosX = posX;
 
-//        double w = cenPixW * zoomScale;
-//        double h = cenPixH * zoomScale;
+    if(mTmpPosY == 0)
+        mTmpPosY = posX;
 
-//        if(xPos < 0){    //to left
-//            if(xPos < (240 - w))    //单次向左滑动到达右边界时，禁止继续滑动
-//                xPos = 240 - w;
+    sFosX = mTmpPosX;
 
-//            if(mShowWidget->x() < (240 - w)){    //向左滑动到达图像右边界时，停止滑动
-//                    xPosLast = 0;
-//                    return;
-//            }
-//        }else
-//            if(xPos > 0){//to right
-//                if(mShowWidget->x() >= 0){ //向右滑动，图片到达左边界，禁止继续滑动
-//                    xPosLast = 0;
-//                    xPos = 0;
-//                }
-//            }
+    if(isZoomMode && isSingleItemUI){
+        printf("posX = %d, horizontalOffset = %d, verticalOffset = %d\n", posX, horizontalOffset, verticalOffset);
 
-//        if(yPos < 0){   //to up
-//            if(yPos < (320 - h))    //向上滑动到达右边界时，禁止继续滑动
-//                yPos = 320 - h;
+        if(posX - mTmpPosX < 0)//to Left
+            moveImgHandler(2, posX - mTmpPosX, 0);
+        else
+            moveImgHandler(3, posX - mTmpPosX, 0);
 
-//            if(mShowWidget->y() < (320 - h)){    //向左滑动到达图像右边界时，停止滑动
-//                    yPosLast = 0;
-//                    return;
-//            }
-//        }else
-//            if(yPos > 0){//to down
-//                if(mShowWidget->y() >= 0){    //向下滑动，图片到达上边界，禁止继续滑动
-//                    yPosLast = 0;
-//                    yPos = 0;
-//                }
-//            }
+        if(posY - mTmpPosY < 0)// to up
+            moveImgHandler(0, 0, posY - mTmpPosY);
+        else
+            moveImgHandler(1, 0, posY - mTmpPosY);
 
-//        mShowWidget->move(xPos + xPosLast, yPos + yPosLast);
-//        mShowWidget->show();
-//    }
+        mTmpPosX = posX;
+        mTmpPosY = posY;
+        return;
+    }else
+    if(!isZoomMode && isSingleItemUI && files.count() > 0){
+        if (sFosX-posX > 60){  //60 是滑动阀值
+            curIndex--;
+        } else if (sFosX-posX < -60){
+            curIndex++;
+        }
+
+        if(curIndex < 0){  curIndex = 0; }
+        if(curIndex > (files.count() - 1)){ curIndex = files.count() - 1; }
+
+        pListShow->setCurrentRow(curIndex);
+        goToImage(curIndex);
+    }
 }
 
 void AlbumWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
+    printf(__func__);
+    printf("\n");
     QSize screenSize(this->width(),this->height());
     QSize cenPicSize(currentImage.width(), currentImage.height());
 
     if(isSingleItemUI){                 //判断当前是否查看图像界面 查看图像界面/缩略图界面
         if(isFirstDouble){              //第一次双击，放大到填充屏幕
-            qDebug() << "first double click!!";
             isZoomMode = true;
             isFirstDouble = false;
             scaleFactor = getScaleValue(cenPicSize, screenSize);
-            horizontalOffset = (SCREEN_WIDTH / 2 - event->x()) / 2;
-            verticalOffset   = (SCREEN_HEIGHT / 2 - event->y()) / 2;
+            currentStepScaleFactor = scaleFactor;
+            scaleFactor = 1;
+            horizontalOffset = (event->x() - SCREEN_WIDTH / 2) / 2;
+            verticalOffset   = (event->y() - SCREEN_HEIGHT / 2) / 2;
+            printf("first double click!! horizontalOffset = %d, verticalOffset = %d, event->x() = %d\n", horizontalOffset, verticalOffset, event->x());
+
             update();
             return;
         }else{   //第二次双击，返回slot_itemClicked
@@ -236,6 +240,7 @@ void AlbumWidget::mouseDoubleClickEvent(QMouseEvent *event)
             isFirstDouble = true;
             isZoomMode = false;
             scaleFactor = 1;
+            currentStepScaleFactor = 1;
             horizontalOffset = 0;
             verticalOffset = 0;
             update();
@@ -253,18 +258,34 @@ void AlbumWidget::keyReleaseEvent(QKeyEvent *event)
     if(isSingleItemUI){
         switch (event->key()){
             case KEY_UP:
+                if(isZoomMode){
+                    moveImgHandler(0, 0, 5);
+                    return;
+                }
                 curIndex -= 2;
                 scaleFactor = 1;
             break;
             case KEY_DOWN:
+                if(isZoomMode){
+                    moveImgHandler(1, 0, -5);
+                    return;
+                }
                 curIndex += 2;
                 scaleFactor = 1;
             break;
             case KEY_LEFT:
-                curIndex --;
+                if(isZoomMode){
+                    moveImgHandler(2, 5, 0);
+                    return;
+                }
+                 curIndex --;
                 scaleFactor = 1;
             break;
             case KEY_RIGHT:
+                if(isZoomMode){
+                    moveImgHandler(3, -5, 0);
+                    return;
+                }
                 curIndex ++;
                 scaleFactor = 1;
             break;
@@ -329,8 +350,8 @@ void AlbumWidget::panTriggered(QPanGesture *gesture) {
     }
 #endif
     QPointF delta = gesture->delta();
-    horizontalOffset += delta.x();
-    verticalOffset += delta.y();
+    horizontalOffset += (int)delta.x();
+    verticalOffset += (int)delta.y();
     update();
 }
 
@@ -387,8 +408,8 @@ bool AlbumWidget::event(QEvent *event)
 
 void AlbumWidget::paintEvent(QPaintEvent *event)
 {
-//    printf(__FUNCTION__);
-
+    printf(__FUNCTION__);
+    printf("\n");
     QPainter p(this);
 
     const qreal iw = currentImage.width();
@@ -397,7 +418,7 @@ void AlbumWidget::paintEvent(QPaintEvent *event)
     const qreal ww = width();
 
     p.translate(ww/2, wh/2);
-    p.translate(horizontalOffset, verticalOffset);
+    p.translate(-horizontalOffset, -verticalOffset);
     p.rotate(rotationAngle);
     p.scale(currentStepScaleFactor * scaleFactor, currentStepScaleFactor * scaleFactor);
     p.translate(-iw/2, -ih/2);
@@ -530,6 +551,54 @@ double AlbumWidget::getScaleValue(QSize img, QSize view)
 void AlbumWidget::updateBufferByKey(bool keyWay)
 {
 
+}
+/**
+ * @brief AlbumWidget::moveImgHandler
+ * @param direction 0 = up, 1 = down, 2 = left, 3 = right
+ * @param horiz
+ * @param verti
+ */
+void AlbumWidget::moveImgHandler(int direction, int horiz, int verti)
+{
+    if(direction < 0 || direction > 3)
+        return;
+
+    if((horizontalOffset - horiz > SCREEN_WIDTH / 4) || (horizontalOffset - horiz < -SCREEN_WIDTH / 4))
+        return;
+
+    if(verticalOffset - verti > SCREEN_HEIGHT / 4 || verticalOffset - verti < -SCREEN_HEIGHT / 4)
+        return;
+
+    switch(direction){
+        case 0: verticalOffset -= verti;
+            break;
+        case 1: verticalOffset -= verti;
+            break;
+        case 2: horizontalOffset -= horiz;
+            break;
+        case 3: horizontalOffset -= horiz;
+            break;
+        default:
+            break;
+    }
+
+    if(horizontalOffset < -SCREEN_WIDTH / 4){
+        horizontalOffset = -SCREEN_WIDTH / 4;
+    }
+
+    if(horizontalOffset > SCREEN_WIDTH / 4){
+        horizontalOffset = SCREEN_WIDTH / 4;
+    }
+
+    if(verticalOffset < -SCREEN_HEIGHT / 4){
+        horizontalOffset = -SCREEN_HEIGHT / 4;
+    }
+
+    if(verticalOffset > SCREEN_HEIGHT / 4){
+        horizontalOffset = SCREEN_HEIGHT / 4;
+    }
+
+    update();
 }
 
 int AlbumWidget::updateUI()
