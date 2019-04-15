@@ -83,7 +83,6 @@ protected:
     void focusInEvent(QFocusEvent *e);
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
-    void mouseMoveEvent(QMouseEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event);
     void keyReleaseEvent(QKeyEvent *event);
     bool gestureEvent(QGestureEvent *event);
@@ -104,6 +103,7 @@ private:
     bool isSingleItemUI;    //是否图片查看界面 default:false
     bool isFirstDouble;     //是否第一次双击   default:true
     bool isZoomMode;        //是否缩放模式    default:false
+    bool isReturnFromSingleUI;
     int cenPixW;
     int cenPixH;
     double zoomScale;
@@ -111,14 +111,14 @@ private:
     int yPosLast;
     int mTmpPosX;
     int mTmpPosY;
-
+    int oldImageCount;
     QImage prevImage, nextImage;
     QImage currentImage;
 
-    int horizontalOffset;   //[-60 - 60]
-    int verticalOffset;
+    int horizontalOffset; //[-60, 60]
+    int verticalOffset;   //[-80, 80]
     qreal rotationAngle;
-    qreal scaleFactor;
+    qreal scaleFactor;//缩放比例
     qreal currentStepScaleFactor;
 
     void setLabelMove(bool enable);
@@ -127,7 +127,6 @@ private:
     void goToImage(int index);
     double getScaleValue(QSize img, QSize view);
     void updateBufferByKey(bool keyWay);
-    void moveImgHandler(int direction, int horiz, int verti);
 //    void updateBufferByMouse()
 
 private slots:
@@ -142,7 +141,7 @@ private:
     void panTriggered(QPanGesture *gesture);
     void pinchTriggered(QPinchGesture *gesture);
     void swipeTriggered(QSwipeGesture *gesture);
-
+    void moveImgHandler(int direction, int horiz, int verti);
     QLabel *mShowWidget;                    // 图像显示窗口
     QPushButton *menuButton;
     QPushButton *backButton;
@@ -166,11 +165,14 @@ public:
     ~picListShow();
     bool MoveStatus();
     bool setMoveStatus();
+    double moveLength() const;
+
 protected:
     void mouseMoveEvent(QMouseEvent *event);
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
     void focusInEvent(QFocusEvent *event);
+    void focusOutEvent(QFocusEvent *event);
 private:
     int yPos0;
     int yPos1;
@@ -180,8 +182,13 @@ private:
     QPoint slidePoint;
     readImgThread thread0;
 
+    double m_moveLength = -1;//移动长度
+
 private slots:
     void readImgCompleteSlot(void);
+
+signals:
+    void widgetSlide(bool);
 
 };
 

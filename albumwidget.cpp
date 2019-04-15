@@ -74,6 +74,12 @@ AlbumWidget::AlbumWidget(QWidget *parent)
     mShowWidget->setGeometry(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);  //缓存两张图片
     mShowWidget->hide();
 
+    QList<Qt::GestureType> gestures;
+    gestures << Qt::PanGesture;
+    gestures << Qt::PinchGesture;
+    gestures << Qt::SwipeGesture;
+    this->grabGestures(gestures);
+
     setAttribute(Qt::WA_AcceptTouchEvents);
 }
 
@@ -110,6 +116,7 @@ void AlbumWidget::focusInEvent(QFocusEvent *){
 
 void AlbumWidget::mousePressEvent(QMouseEvent *event)
 {
+//    printf("AlbumWidget::deriveMousePressEvent  files.count = %d \n",files.count());
     if (files.count() <= 0) {
         return;
     }
@@ -117,16 +124,8 @@ void AlbumWidget::mousePressEvent(QMouseEvent *event)
     mousePress = true;
     m_mouseSrcPos = event->pos();
 
-//    xPosLast = mShowWidget->x();
-//    yPosLast = mShowWidget->y();
-
-//    if((m_mouseSrcPos.y() > SCREEN_HEIGHT-STATUS_BAR_HEIGHT) && (m_mouseSrcPos.x() > SCREEN_WIDTH-STATUS_BAR_HEIGHT)){
-//        printf("clicked Menu!");
-//        pSubFieldWidgetProperties.get()->show();
-//    }
-
-//    printf("Press isZoomMode, isFirstDouble, xPos = %d, yPos = %d, xPosLast = mShowWidget.x = %d, yPosLast = mShowWidget.y = %d\n",\
-//                                       m_mouseSrcPos.x(),    m_mouseSrcPos.y(),   mShowWidget->x(),  mShowWidget->y());
+    xPosLast = mShowWidget->x();
+    yPosLast = mShowWidget->y();
 }
 
 void AlbumWidget::mouseReleaseEvent(QMouseEvent *event)
@@ -136,17 +135,17 @@ void AlbumWidget::mouseReleaseEvent(QMouseEvent *event)
     int yPos = m_mouseDstPos.y() - m_mouseSrcPos.y();
 
     if(!isZoomMode){
-        if (mouseMove) {
-            if((curIndex == 0) && (xPos > 0))
-                return;
-            else
-            if((curIndex == pListShow->count() - 1) && (xPos < 0))
-                return;
-            if(xPos > 100)   //100 is max tolerate distance for double press
-                curIndex --;
-            else
-                if(xPos < -100)
-                    curIndex ++;
+        if(isSingleItemUI && files.count() > 0){//滑动
+            if (xPos > 60){  //60 是滑动阀值
+                curIndex--;
+            } else if (xPos < -60){
+                curIndex++;
+            }
+
+            if(curIndex < 0){  curIndex = 0; }
+            if(curIndex > (files.count() - 1)){ curIndex = files.count() - 1; }
+
+            pListShow->setCurrentRow(curIndex);
             goToImage(curIndex);
         }
     }else{  //缩放模式下，当前缩放比例为1时，允许左右切换
@@ -166,77 +165,24 @@ void AlbumWidget::mouseReleaseEvent(QMouseEvent *event)
     }
 }
 
-void AlbumWidget::mouseMoveEvent(QMouseEvent *event)
-{
-    printf(__FUNCTION__);
-    printf("\n");
-
-    int posX = GET_POS_X;
-    int posY = GET_POS_Y;
-    static int sFosX = 0;
-
-    if(mTmpPosX == 0)
-        mTmpPosX = posX;
-
-    if(mTmpPosY == 0)
-        mTmpPosY = posX;
-
-    sFosX = mTmpPosX;
-
-    if(isZoomMode && isSingleItemUI){
-        printf("posX = %d, horizontalOffset = %d, verticalOffset = %d\n", posX, horizontalOffset, verticalOffset);
-
-        if(posX - mTmpPosX < 0)//to Left
-            moveImgHandler(2, posX - mTmpPosX, 0);
-        else
-            moveImgHandler(3, posX - mTmpPosX, 0);
-
-        if(posY - mTmpPosY < 0)// to up
-            moveImgHandler(0, 0, posY - mTmpPosY);
-        else
-            moveImgHandler(1, 0, posY - mTmpPosY);
-
-        mTmpPosX = posX;
-        mTmpPosY = posY;
-        return;
-    }else
-    if(!isZoomMode && isSingleItemUI && files.count() > 0){
-        if (sFosX-posX > 60){  //60 是滑动阀值
-            curIndex--;
-        } else if (sFosX-posX < -60){
-            curIndex++;
-        }
-
-        if(curIndex < 0){  curIndex = 0; }
-        if(curIndex > (files.count() - 1)){ curIndex = files.count() - 1; }
-
-        pListShow->setCurrentRow(curIndex);
-        goToImage(curIndex);
-    }
-}
-
 void AlbumWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    printf(__func__);
-    printf("\n");
     QSize screenSize(this->width(),this->height());
     QSize cenPicSize(currentImage.width(), currentImage.height());
-
     if(isSingleItemUI){                 //判断当前是否查看图像界面 查看图像界面/缩略图界面
         if(isFirstDouble){              //第一次双击，放大到填充屏幕
             isZoomMode = true;
             isFirstDouble = false;
             scaleFactor = getScaleValue(cenPicSize, screenSize);
+            if((int)scaleFactor == 1)
+                scaleFactor = 2;
             currentStepScaleFactor = scaleFactor;
             scaleFactor = 1;
             horizontalOffset = (event->x() - SCREEN_WIDTH / 2) / 2;
             verticalOffset   = (event->y() - SCREEN_HEIGHT / 2) / 2;
-            printf("first double click!! horizontalOffset = %d, verticalOffset = %d, event->x() = %d\n", horizontalOffset, verticalOffset, event->x());
-
             update();
             return;
         }else{   //第二次双击，返回slot_itemClicked
-            qDebug() << "second double click!!!";
             isFirstDouble = true;
             isZoomMode = false;
             scaleFactor = 1;
@@ -278,7 +224,7 @@ void AlbumWidget::keyReleaseEvent(QKeyEvent *event)
                     moveImgHandler(2, 5, 0);
                     return;
                 }
-                 curIndex --;
+                curIndex --;
                 scaleFactor = 1;
             break;
             case KEY_RIGHT:
@@ -296,6 +242,8 @@ void AlbumWidget::keyReleaseEvent(QKeyEvent *event)
                     QSize screenSize(this->width(),this->height());
                     QSize cenPicSize(currentImage.width(), currentImage.height());
                     scaleFactor = getScaleValue(cenPicSize, screenSize);
+                    if((int)scaleFactor == 1)
+                        scaleFactor = 2;
                 }
             break;
             case KEY_NARROW:
@@ -328,6 +276,9 @@ void AlbumWidget::keyReleaseEvent(QKeyEvent *event)
 }
 
 bool AlbumWidget::gestureEvent(QGestureEvent *event){
+    printf(__FUNCTION__);
+    printf("\n");
+
     if (QGesture *swipe = event->gesture(Qt::SwipeGesture))
         swipeTriggered(static_cast<QSwipeGesture *>(swipe));
     else if (QGesture *pan = event->gesture(Qt::PanGesture))
@@ -339,6 +290,9 @@ bool AlbumWidget::gestureEvent(QGestureEvent *event){
 
 
 void AlbumWidget::panTriggered(QPanGesture *gesture) {
+    printf(__FUNCTION__);
+    printf("\n");
+
 #ifndef QT_NO_CURSOR
     switch (gesture->state()) {
     case Qt::GestureStarted:
@@ -357,6 +311,8 @@ void AlbumWidget::panTriggered(QPanGesture *gesture) {
 
 void AlbumWidget::pinchTriggered(QPinchGesture *gesture)
 {
+    printf(__FUNCTION__);
+    printf("\n");
     QPinchGesture::ChangeFlags changeFlags = gesture->changeFlags();
 //    if (changeFlags & QPinchGesture::RotationAngleChanged) {
 //        qreal rotationDelta = gesture->rotationAngle() - gesture->lastRotationAngle();
@@ -434,10 +390,6 @@ bool AlbumWidget::backEvent()
     else
         return true;
 }
-
-//gesturestart      // 当有两根或多根手指放到屏幕上的时候触发
-//gesturechange     // 当有两根或多根手指在屏幕上，并且有手指移动的时候触发
-//gestureend        // 当倒数第二根手指提起的时候触发，结束gesture
 
 void AlbumWidget::setLabelMove(bool enable)
 {
@@ -611,6 +563,7 @@ int AlbumWidget::updateUI()
     if (!dir.exists()) {
         return -1;
     }
+
     // 设置过滤器
     dir.setFilter(QDir::Files | QDir::NoSymLinks);
     filters << "*.png" << "*.jpg" <<"*.bmp";
@@ -618,7 +571,7 @@ int AlbumWidget::updateUI()
     files = dir.entryList();
 
     // 创建单元项
-    for (int i = 0; i<files.count(); ++i) {
+    for (int i = 0; i < files.count(); ++i) {
         QPixmap pixmap(ALBUM_PATH + files.at(i));
         QListWidgetItem *listWidgetItem = new QListWidgetItem(QIcon(pixmap.scaled(IMAGE_SIZE)), NULL);  //delete name display
         listWidgetItem->setSizeHint(ITEM_SIZE);
@@ -627,8 +580,6 @@ int AlbumWidget::updateUI()
     if(pListShow->count() > 0){
         pListShow->setCurrentRow(curIndex);//默认光标在第一个
     }
-    pListShow->raise();
-    pListShow->show();
     return 0;
 }
 
@@ -636,7 +587,6 @@ QImage AlbumWidget::loadImage(const QString &fileName)
 {
     QImageReader reader(fileName);
     reader.setAutoTransform(true);
-//    qDebug() << "loading" << QDir::toNativeSeparators(fileName) << position << '/' << files.size();
     if (!reader.canRead()) {
 //        qDebug() << QDir::toNativeSeparators(fileName) << ": can't load image";
         return QImage();
@@ -655,6 +605,12 @@ QImage AlbumWidget::loadImage(const QString &fileName)
 
 // 全屏等比例显示图像
 void AlbumWidget::slot_itemClicked(QListWidgetItem * item){
+    qDebug() << "curIndex = " << curIndex;
+    if(files.size() == 0){return;}
+    if(pListShow->MoveStatus() && pListShow->moveLength() > 20){    //disable to load single image when slide on album
+        pListShow->setMoveStatus();
+        return;
+    }
 
     horizontalOffset        =   0;
     verticalOffset          =   0;
@@ -666,6 +622,11 @@ void AlbumWidget::slot_itemClicked(QListWidgetItem * item){
     isFirstDouble = true;
 
     curIndex = pListShow->row(item);
+
+    if(curIndex < 0  || (curIndex > files.size() -1)){return;}
+
+    printf("AlbumWidget::slot_itemClicked curIndex = %d \n",curIndex);
+
     goToImage(curIndex);
 
 //    //menu button
@@ -686,18 +647,13 @@ void AlbumWidget::menuView(void){
 }
 
 void AlbumWidget::back2Album(void){
-    //qDebug() << "back2Album";
+//    printf("AlbumWidget::back2Album  &&&&&&&&&&&&&&&  \n");
+    isReturnFromSingleUI = true;
     isSingleItemUI = false;
     isZoomMode = false;
-
-    //disconnect(backButton, SIGNAL(clicked()), this, SLOT(back2Album()));
     mShowWidget->hide();
-    //this->show();
     pListShow->show();
-    if(pListShow->count() > 0){
-        pListShow->setCurrentRow(curIndex);//默认光标在第一个
-    }
-//    printf("\nback2Album, count = %d\n", pListShow->count());
+    pListShow->setCurrentRow(curIndex);
     this->show();
 }
 
@@ -728,9 +684,15 @@ void picListShow::mouseMoveEvent(QMouseEvent *event)
     isMove = true;
     if(!slidePoint.isNull()){
         bool direction = (slidePoint.y() < event->pos().y());
-        int singleStep = (direction ? -4 : 4);
+        int singleStep = (direction ? -2 : 2);
         this->verticalScrollBar()->setValue(verticalScrollBar()->value() + singleStep);
+        if(fabs(slidePoint.x() - event->pos().x()) > 80){//80 滑动阀值
+            emit widgetSlide(!(slidePoint.x() > event->pos().x()));
+        }
     }
+    QPoint p = event->pos() - slidePoint;
+
+    m_moveLength = std::sqrt(std::pow(p.x(), 2) + std::pow(p.y(), 2));
 }
 
 void picListShow::mousePressEvent(QMouseEvent *event)
@@ -746,25 +708,32 @@ void picListShow::mouseReleaseEvent(QMouseEvent *event)
 {
     QPoint EndPoint;
     EndPoint = event->pos();
-//    if(EndPoint == slidePoint)
-//        itemClicked(this->selectedItems().at(0));   //    //sent itemClicked signal to ImageView
-//    else
-//        slidePoint = QPoint();  //resets the scroll drag
 
-
-    QListWidget::mouseReleaseEvent(event);
+   QListWidget::mouseReleaseEvent(event);
 }
-
+//开机后第一次进相册才需要执行一次线程thread0, 后续检测相册文件数量若有变化,再次执行thread0
 void picListShow::focusInEvent(QFocusEvent *event)
 {
-    thread0.start();
+    bool ret = thread0.isRunning();
+    if(!ret)
+        thread0.start();
+}
+
+void picListShow::focusOutEvent(QFocusEvent *event)
+{
+    bool ret = thread0.isRunning();
+    bool ret1=  thread0.isFinished();
+//    if(ret1)
+//        connect(&thread0, SIGNAL(finished()), &thread0, SLOT(deleteLater()));
+}
+
+double picListShow::moveLength() const
+{
+    return m_moveLength;
 }
 
 void picListShow::readImgCompleteSlot()
 {
-    qDebug() << __func__;
-    thread0.stop();
-    bool ret0 = thread0.isRunning();
-    bool ret1 = thread0.isFinished();
+
 }
 
