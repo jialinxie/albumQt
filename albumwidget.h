@@ -72,11 +72,14 @@ public:
         static AlbumWidget *m_instance = new AlbumWidget(parent);
         return m_instance;
     }
-    int updateUI();
 
-private:
     AlbumWidget(QWidget *parent = 0);
     ~AlbumWidget();
+    int updateUI();
+    int getCurrentImageCount(void);
+    int getOldImageCount(void);
+    void setOldImageCount(int count);
+    void show();
     void grabGestures(const QList<Qt::GestureType> &gestures);
 
 protected:
@@ -112,8 +115,9 @@ private:
     int mTmpPosX;
     int mTmpPosY;
     int oldImageCount;
-    QImage prevImage, nextImage;
     QImage currentImage;
+    QPixmap currentPixmap;
+    QList<QPixmap> pixmapList;
 
     int horizontalOffset; //[-60, 60]
     int verticalOffset;   //[-80, 80]
@@ -138,16 +142,13 @@ private slots:
 
 private:
     QImage loadImage(const QString &fileName);
+    QPixmap loadPixmap(const QString &fileName);
     void panTriggered(QPanGesture *gesture);
     void pinchTriggered(QPinchGesture *gesture);
     void swipeTriggered(QSwipeGesture *gesture);
     void moveImgHandler(int direction, int horiz, int verti);
-    QLabel *mShowWidget;                    // 图像显示窗口
     QPushButton *menuButton;
     QPushButton *backButton;
-    QPixmap cenPixmap;
-    QPixmap showPixmap;
-    QImage  cenImg;
     picListShow *pListShow;
     QDir dir;
     QStringList filters;

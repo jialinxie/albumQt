@@ -17,6 +17,7 @@
 #include <qnamespace.h>
 #include <QObject>
 #include <assert.h>
+
 #define PICVIEWSIZE 77
 
 
@@ -59,20 +60,11 @@ AlbumWidget::AlbumWidget(QWidget *parent)
     pListShow->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     pListShow->setFocus();
 
-//    updateUI();
-
     connect(pListShow, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(slot_itemClicked(QListWidgetItem*)));
-
-    mShowWidget = new QLabel(this);
-
     menuButton = new QPushButton(this);
     menuButton->hide();
     backButton   = new QPushButton(this);
     backButton->hide();
-
-    mShowWidget->setAutoFillBackground(true);
-    mShowWidget->setGeometry(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);  //缓存两张图片
-    mShowWidget->hide();
 
     QList<Qt::GestureType> gestures;
     gestures << Qt::PanGesture;
@@ -95,6 +87,46 @@ void AlbumWidget::grabGestures(const QList<Qt::GestureType> &gestures)
     //! [enable gestures]
 }
 
+int AlbumWidget::getCurrentImageCount()
+{
+    files.clear();
+
+    // 判断路径是否存在
+    bool ret = dir.setCurrent(ALBUM_PATH);
+    if (!dir.exists()) {
+        return -1;
+    }
+
+    // 设置过滤器
+    dir.setFilter(QDir::Files | QDir::NoSymLinks);
+    filters << "*.png" << "*.jpg" <<"*.bmp";
+    dir.setNameFilters(filters);
+    files = dir.entryList();
+    return files.count();
+}
+
+int AlbumWidget::getOldImageCount()
+{
+    return oldImageCount;
+}
+
+void AlbumWidget::setOldImageCount(int count)
+{
+    oldImageCount = count;
+}
+
+void AlbumWidget::show()
+{
+    if(!isReturnFromSingleUI){
+        if(files.count() > 0){
+            pListShow->setCurrentRow(0);
+        }
+    }else{
+        isReturnFromSingleUI = false;
+    }
+
+    QWidget::show();
+}
 void AlbumWidget::albumMenuSlot(int idx){
     printf("menu idx = %d", idx);
 //    if(idx == 0)
@@ -116,16 +148,12 @@ void AlbumWidget::focusInEvent(QFocusEvent *){
 
 void AlbumWidget::mousePressEvent(QMouseEvent *event)
 {
-//    printf("AlbumWidget::deriveMousePressEvent  files.count = %d \n",files.count());
     if (files.count() <= 0) {
         return;
     }
 
     mousePress = true;
     m_mouseSrcPos = event->pos();
-
-    xPosLast = mShowWidget->x();
-    yPosLast = mShowWidget->y();
 }
 
 void AlbumWidget::mouseReleaseEvent(QMouseEvent *event)
@@ -168,7 +196,7 @@ void AlbumWidget::mouseReleaseEvent(QMouseEvent *event)
 void AlbumWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
     QSize screenSize(this->width(),this->height());
-    QSize cenPicSize(currentImage.width(), currentImage.height());
+    QSize cenPicSize(currentPixmap.width(), currentPixmap.height());
     if(isSingleItemUI){                 //判断当前是否查看图像界面 查看图像界面/缩略图界面
         if(isFirstDouble){              //第一次双击，放大到填充屏幕
             isZoomMode = true;
@@ -240,7 +268,7 @@ void AlbumWidget::keyReleaseEvent(QKeyEvent *event)
             break;
             case KEY_ENLARGE:{
                     QSize screenSize(this->width(),this->height());
-                    QSize cenPicSize(currentImage.width(), currentImage.height());
+                    QSize cenPicSize(currentPixmap.width(), currentPixmap.height());
                     scaleFactor = getScaleValue(cenPicSize, screenSize);
                     if((int)scaleFactor == 1)
                         scaleFactor = 2;
@@ -341,11 +369,9 @@ void AlbumWidget::swipeTriggered(QSwipeGesture *gesture)
     if (gesture->state() == Qt::GestureFinished) {
         if (gesture->horizontalDirection() == QSwipeGesture::Left
             || gesture->verticalDirection() == QSwipeGesture::Up) {
-//            qCDebug(lcExample) << "swipeTriggered(): swipe to previous";
             goPrevImage();
 //            printf("swipe to previous\n");
         } else {
-//            qCDebug(lcExample) << "swipeTriggered(): swipe to next";
             goNextImage();
 //            printf("swipe to next\n");
         }
@@ -368,8 +394,8 @@ void AlbumWidget::paintEvent(QPaintEvent *event)
     printf("\n");
     QPainter p(this);
 
-    const qreal iw = currentImage.width();
-    const qreal ih = currentImage.height();
+    const qreal iw = currentPixmap.width();
+    const qreal ih = currentPixmap.height();
     const qreal wh = height();
     const qreal ww = width();
 
@@ -378,7 +404,7 @@ void AlbumWidget::paintEvent(QPaintEvent *event)
     p.rotate(rotationAngle);
     p.scale(currentStepScaleFactor * scaleFactor, currentStepScaleFactor * scaleFactor);
     p.translate(-iw/2, -ih/2);
-    p.drawImage(0, 0, currentImage);
+    p.drawPixmap(0, 0, currentPixmap);
 }
 
 bool AlbumWidget::backEvent()
@@ -402,13 +428,7 @@ void AlbumWidget::goNextImage()
         return;
 
     if (position < files.size()-1) {
-        ++position;
-        prevImage = currentImage;
-        currentImage = nextImage;
-        if (position+1 < files.size())
-            nextImage = loadImage(ALBUM_PATH + files.at(position+1));
-        else
-            nextImage = QImage();
+        currentPixmap = pixmapList.at(++position);/*loadPixmap(ALBUM_PATH + files.at(++position));*/
     }
     update();
 }
@@ -419,19 +439,12 @@ void AlbumWidget::goPrevImage()
         return;
 
     if (position > 0) {
-        --position;
-        nextImage = currentImage;
-        currentImage = prevImage;
-        if (position > 0)
-            prevImage = loadImage(ALBUM_PATH + files.at(position-1));
-        else
-            prevImage = QImage();
+        currentPixmap = pixmapList.at(--position);/*loadPixmap(ALBUM_PATH + files.at(--position));*/
     }
     update();
 }
 
 void AlbumWidget::goToImage(int index){
-
     if (files.isEmpty())
         return;
 
@@ -441,26 +454,15 @@ void AlbumWidget::goToImage(int index){
     }
 
     if (index == position+1) {
-        goNextImage();
-        return;
-    }
-
+        currentPixmap = pixmapList.at(++position);
+    }else
     if (position > 0 && index == position-1) {
-        goPrevImage();
-        return;
+        currentPixmap = pixmapList.at(--position);
+    }else{
+        position = index;
+        currentPixmap = pixmapList.at(position);
     }
 
-    position = index;
-
-    if (index > 0)
-        prevImage = loadImage(ALBUM_PATH + files.at(position-1));
-    else
-        prevImage = QImage();
-    currentImage = loadImage(ALBUM_PATH + files.at(position));
-    if (position+1 < files.size())
-        nextImage = loadImage(ALBUM_PATH + files.at(position+1));
-    else
-        nextImage = QImage();
     update();
 }
 
@@ -557,6 +559,7 @@ int AlbumWidget::updateUI()
 {
     files.clear();
     pListShow->clear();
+    pixmapList.clear();
 
     // 判断路径是否存在
     bool ret = dir.setCurrent(ALBUM_PATH);
@@ -576,6 +579,7 @@ int AlbumWidget::updateUI()
         QListWidgetItem *listWidgetItem = new QListWidgetItem(QIcon(pixmap.scaled(IMAGE_SIZE)), NULL);  //delete name display
         listWidgetItem->setSizeHint(ITEM_SIZE);
         pListShow->insertItem(i, listWidgetItem);
+        pixmapList.append(pixmap.scaled(QSize(240, 320), Qt::KeepAspectRatio));
     }
     if(pListShow->count() > 0){
         pListShow->setCurrentRow(curIndex);//默认光标在第一个
@@ -585,22 +589,25 @@ int AlbumWidget::updateUI()
 
 QImage AlbumWidget::loadImage(const QString &fileName)
 {
-    QImageReader reader(fileName);
-    reader.setAutoTransform(true);
-    if (!reader.canRead()) {
-//        qDebug() << QDir::toNativeSeparators(fileName) << ": can't load image";
-        return QImage();
-    }
+    const QSize maximumSize(240, 320); // Reduce in case someone has large photo images.
 
     QImage image;
-    if (!reader.read(&image)) {
-//        qDebug() << QDir::toNativeSeparators(fileName) << ": corrupted image: " << reader.errorString();
-        return QImage();
-    }
-    const QSize maximumSize(240, 320); // Reduce in case someone has large photo images.
-    if (image.size().width() > maximumSize.width() || image.height() > maximumSize.height())
-        image = image.scaled(maximumSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    image.load(fileName);
+
+    QPixmap pixmapToShow = QPixmap::fromImage(image, Qt::AutoColor);
+
+//    const QSize maximumSize(240, 320); // Reduce in case someone has large photo images.
+//    if (image.size().width() > maximumSize.width() || image.height() > maximumSize.height())
+//        image = image.scaled(maximumSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     return image;
+}
+
+QPixmap AlbumWidget::loadPixmap(const QString &fileName)
+{
+    QIcon currentIcon = pListShow->item(curIndex)->icon();
+    QPixmap pixmapToShow = currentIcon.pixmap(currentIcon.actualSize(QSize(1944, 2592)));
+    pixmapToShow.scaled(240, 320, Qt::KeepAspectRatio, Qt::FastTransformation);
+    return pixmapToShow;
 }
 
 // 全屏等比例显示图像
@@ -651,7 +658,6 @@ void AlbumWidget::back2Album(void){
     isReturnFromSingleUI = true;
     isSingleItemUI = false;
     isZoomMode = false;
-    mShowWidget->hide();
     pListShow->show();
     pListShow->setCurrentRow(curIndex);
     this->show();

@@ -14,8 +14,13 @@ void readImgThread::run()
     timeval time0, time1;
     gettimeofday(&time0, NULL);
 
-    AlbumWidget *img2Thread0 = AlbumWidget::getInstance(NULL);
-    img2Thread0->updateUI();
+    AlbumWidget *imageWidget0 = AlbumWidget::getInstance(NULL);
+
+    if(imageWidget0->getOldImageCount() != imageWidget0->getCurrentImageCount()){
+        imageWidget0->setOldImageCount(imageWidget0->getCurrentImageCount());
+        imageWidget0->updateUI();
+    }
+
 
     gettimeofday(&time1, NULL);
 
