@@ -13,11 +13,10 @@ class MainWidget : public QMainWindow
 public:
     explicit MainWidget(QWidget *parent = 0);
     ~MainWidget();
-    void grabGestures(const QList<Qt::GestureType> &gestures);
 
 private:
     AlbumWidget *imageWidget;
-    readImgThread thread0;
+//    readImgThread thread0;
 };
 
 #endif // MAINWIDGET_H

@@ -14,8 +14,3 @@ MainWidget::~MainWidget()
 {
 
 }
-
-void MainWidget::grabGestures(const QList<Qt::GestureType> &gestures)
-{
-//    imageWidget->grabGestures(gestures);
-}

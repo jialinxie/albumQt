@@ -29,13 +29,11 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
     albumwidget.cpp \
-    mainwidget.cpp \
-    readimgthread.cpp
+#    readimgthread.cpp
 
 HEADERS += \
     albumwidget.h \
-    mainwidget.h \
-    readimgthread.h
+#    readimgthread.h
 
 CONFIG += console
 

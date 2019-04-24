@@ -1,4 +1,4 @@
-﻿#include "readimgthread.h"
+﻿//#include "readimgthread.h"
 #include <QDebug>
 #include "albumwidget.h"
 #include <sys/time.h>

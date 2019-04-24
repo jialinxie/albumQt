@@ -20,8 +20,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    MainWidget w;
-    w.show();
+    AlbumWidget *imageWidget = AlbumWidget::getInstance(NULL);
+    imageWidget->show();
 
     return a.exec();
 }
