@@ -13,6 +13,7 @@
 #include <QDir>
 #include <QImage>
 #include <QImageReader>
+#include <QPainter>
 //#include "readimgthread.h"
 
 //获取鼠标坐标函数分类，根据不同情况使用不同函数
@@ -20,7 +21,7 @@
 #define GET_POS_Y                  QCursor::pos().y();//event->globalX()//
 
 #ifdef QT_PC
-    #define ALBUM_PATH      "../Camera/"
+    #define ALBUM_PATH      "/Users/jack/Downloads/Camera/"
 #else
     #define ALBUM_PATH      "/launcher/BHC_USER/Camera/"
 #endif
@@ -74,12 +75,14 @@ public:
         return a_instance;
     }
 
-    AlbumWidget(QWidget *parent = 0);
+    AlbumWidget(QWidget *parent = nullptr);
     ~AlbumWidget();
     int updateUI();
     int getCurrentImageCount(void);
     int getOldImageCount(void);
     void setOldImageCount(int count);
+
+    QListWidget *pListShow;
 
 protected:
     void focusInEvent(QFocusEvent *e);
@@ -87,26 +90,18 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event);
     void keyReleaseEvent(QKeyEvent *event);
     bool backEvent();                                   //点击返回按钮式由派生类做判断，要不要返回
-
+    void mouseMoveEvent(QMouseEvent *event);
 private:
+    QLabel *backgroundLabel;
     singleImgShow *pSingleImgShow;
     QPoint m_mouseSrcPos;   //滑动的初始点
     QPoint m_mouseDstPos;   //滑动的终点
-    QLabel *total_label;    //图片滑动的动态页面/放大后的移动页面（大小变化）
-    bool mousePress;
-    bool mouseMove;
-    bool label_move;
-    bool firstPress;
     int curIndex;
-    int curPosX;
-    int xPosLast;
-    int yPosLast;
-    int mTmpPosX;
-    int mTmpPosY;
     int oldImageCount;
 
-    void setLabelMove(bool enable);
-    double getScaleValue(QSize img, QSize view);
+    bool moveStatus(void);
+    void setMoveStatus(void);
+    double moveLength() const;
 
 private slots:
     void slot_itemClicked(QListWidgetItem*);
@@ -117,14 +112,15 @@ private slots:
 private:
     QPushButton *menuButton;
     QPushButton *backButton;
-    QListWidget *pListShow;
     QDir dir;
     QStringList filters;
     QSize IMAGE_SIZE;
     QSize ITEM_SIZE;
-    QString path;
     QStringList files;                      // 文件目录下所有的图像文件名
     int position;
+    bool isMove;
+    QPoint slidePoint;
+    double m_moveLength = -1;//移动长度
 };
 
 class singleImgShow : public QWidget{
@@ -151,24 +147,9 @@ private:
     QPoint m_mouseSrcPos;   //滑动的初始点
     QPoint m_mouseDstPos;   //滑动的终点
     QLabel *total_label;    //图片滑动的动态页面/放大后的移动页面（大小变化）
-    bool mousePress;
-    bool mouseMove;
-    bool label_move;
-    bool firstPress;
     int curIndex;
-    int curPosX;
     bool isFirstDouble;     //是否第一次双击   default:true
     bool isZoomMode;        //是否缩放模式    default:false
-    bool isReturnFromSingleUI;
-    int cenPixW;
-    int cenPixH;
-    double zoomScale;
-    int xPosLast;
-    int yPosLast;
-    int mTmpPosX;
-    int mTmpPosY;
-    int oldImageCount;
-    QImage currentImage;
     QPixmap currentPixmap;
 
     int horizontalOffset; //[-60, 60]
@@ -177,7 +158,6 @@ private:
     qreal scaleFactor;//缩放比例
     qreal currentStepScaleFactor;
 
-    void setLabelMove(bool enable);
     void goNextImage();
     void goPrevImage();
     double getScaleValue(QSize img, QSize view);
@@ -193,48 +173,10 @@ private:
     void moveImgHandler(int direction, int horiz, int verti);
     QPushButton *menuButton;
     QPushButton *backButton;
-//    QListWidget *pListShow;
-    QDir dir;
-    QStringList filters;
     QSize IMAGE_SIZE;
     QSize ITEM_SIZE;
-    QString path;
     QStringList files;                      // 文件目录下所有的图像文件名
     int position;
 };
-
-//class picListShow : public QListWidget{
-//    Q_OBJECT
-//public:
-//    explicit picListShow(QWidget *parent);
-//    ~picListShow();
-//    bool MoveStatus();
-//    bool setMoveStatus();
-//    double moveLength() const;
-
-//protected:
-//    void mouseMoveEvent(QMouseEvent *event);
-//    void mousePressEvent(QMouseEvent *event);
-//    void mouseReleaseEvent(QMouseEvent *event);
-//    void focusInEvent(QFocusEvent *event);
-//    void focusOutEvent(QFocusEvent *event);
-//private:
-//    int yPos0;
-//    int yPos1;
-//    int xPos0;
-//    int xPos1;
-//    bool isMove;
-//    QPoint slidePoint;
-//    readImgThread thread0;
-
-//    double m_moveLength = -1;//移动长度
-
-//private slots:
-//    void readImgCompleteSlot(void);
-
-//signals:
-//    void widgetSlide(bool);
-
-//};
 
 #endif // AlbumWidget_H

@@ -23,17 +23,15 @@
 
 AlbumWidget::AlbumWidget(QWidget *parent)
     : QWidget(parent)
-    , mousePress(false)
-    , mouseMove(false)
     , curIndex(0)
-    , curPosX(-240)
-    , xPosLast(0)
-    , yPosLast(0)
+    , isMove(false)
 {
     IMAGE_SIZE = QSize(PICVIEWSIZE, PICVIEWSIZE);
     ITEM_SIZE = QSize(PICVIEWSIZE, PICVIEWSIZE);
 
-    setGeometry(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    backgroundLabel = new QLabel(this);
+    backgroundLabel->setGeometry(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    backgroundLabel->setStyleSheet("background-color:white");
 
     // QListWidget基本设置
     pListShow = new QListWidget(this);
@@ -118,13 +116,17 @@ void AlbumWidget::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    mousePress = true;
     m_mouseSrcPos = event->pos();
+
+    if(event->button() == Qt::LeftButton){
+        slidePoint = event->pos();
+    }
 }
 
 void AlbumWidget::mouseReleaseEvent(QMouseEvent *event)
 {
-
+        QPoint EndPoint;
+        EndPoint = event->pos();
 }
 
 void AlbumWidget::keyReleaseEvent(QKeyEvent *event)
@@ -147,41 +149,35 @@ bool AlbumWidget::backEvent()
     pListShow->setCurrentRow(0);
 }
 
-void AlbumWidget::setLabelMove(bool enable)
+void AlbumWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    label_move = enable;
+        isMove = true;
+        if(!slidePoint.isNull()){
+            bool direction = (slidePoint.y() < event->pos().y());
+            int singleStep = (direction ? -2 : 2);
+            pListShow->verticalScrollBar()->setValue(pListShow->verticalScrollBar()->value() + singleStep);
+//            if(fabs(slidePoint.x() - event->pos().x()) > 80){//80 滑动阀值
+//                emit widgetSlide(!(slidePoint.x() > event->pos().x()));
+//            }
+        }
+        QPoint p = event->pos() - slidePoint;
+
+        m_moveLength = std::sqrt(std::pow(p.x(), 2) + std::pow(p.y(), 2));
 }
 
-double AlbumWidget::getScaleValue(QSize img, QSize view)
+bool AlbumWidget::moveStatus()
 {
-    double w = view.width() * 1.0;
-    double h = view.height()* 1.0;
-    double wi = img.width();
-    double hi = img.height();
+    return isMove;
+}
 
-    double x = w / wi;
-    double y = h / hi;
+void AlbumWidget::setMoveStatus(void)
+{
+    isMove = false;
+}
 
-    if((wi <= w) && (hi <= h)){
-        if (x >= y)
-            return x;
-        else
-            return y;
-    }else
-        if((wi > w) && (hi <= h)){
-            //get: y > x
-            return y;
-        }else
-            if((wi <= w) && (hi >=h)){
-                //get: x > y
-                return x;
-            }else
-                if((wi >= w) && (hi >= h)){
-                    if(x > y)
-                        return 1/x;
-                    else
-                        return 1/y;
-                }
+double AlbumWidget::moveLength() const
+{
+    return m_moveLength;
 }
 
 int AlbumWidget::updateUI()
@@ -222,14 +218,18 @@ void AlbumWidget::slot_itemClicked(QListWidgetItem * item){
     if(files.size() == 0){return;}
     if(curIndex < 0  || (curIndex > files.size() -1)){return;}
 
-//    if(pListShow->MoveStatus() && pListShow->moveLength() > 20){    //disable to load single image when slide on album
-//        pListShow->setMoveStatus();
-//        return;
-//    }
+    if(this->moveStatus() && this->moveLength() > 20){    //disable to load single image when slide on album
+        this->setMoveStatus();
+        return;
+    }
 
     curIndex = pListShow->row(item);
 
+//    this->setStyleSheet("background-color:black");
+    this->pListShow->hide();
+
     pSingleImgShow->goToImage(curIndex);
+
     pSingleImgShow->setFocus();
     pSingleImgShow->raise();
     pSingleImgShow->show();
@@ -250,77 +250,12 @@ void AlbumWidget::back2Album(void){
 //    connect(&thread0, SIGNAL(sendReadImgComplete()), this, SLOT(readImgCompleteSlot()));
 //}
 
-//picListShow::~picListShow()
-//{
-
-//}
-
-//bool picListShow::MoveStatus()
-//{
-//    return isMove;
-//}
-
-//bool picListShow::setMoveStatus()
-//{
-//    isMove = false;
-//}
-
-//void picListShow::mouseMoveEvent(QMouseEvent *event)
-//{
-//    isMove = true;
-//    if(!slidePoint.isNull()){
-//        bool direction = (slidePoint.y() < event->pos().y());
-//        int singleStep = (direction ? -2 : 2);
-//        this->verticalScrollBar()->setValue(verticalScrollBar()->value() + singleStep);
-//        if(fabs(slidePoint.x() - event->pos().x()) > 80){//80 滑动阀值
-//            emit widgetSlide(!(slidePoint.x() > event->pos().x()));
-//        }
-//    }
-//    QPoint p = event->pos() - slidePoint;
-
-//    m_moveLength = std::sqrt(std::pow(p.x(), 2) + std::pow(p.y(), 2));
-//}
-
-//void picListShow::mousePressEvent(QMouseEvent *event)
-//{
-//    if(event->button() == Qt::LeftButton){
-//        slidePoint = event->pos();
-//        yPos0 = slidePoint.x();
-//    }
-//    QListWidget::mousePressEvent(event);
-//}
-
-//void picListShow::mouseReleaseEvent(QMouseEvent *event)
-//{
-//    QPoint EndPoint;
-//    EndPoint = event->pos();
-
-//   QListWidget::mouseReleaseEvent(event);
-//}
 ////开机后第一次进相册才需要执行一次线程thread0, 后续检测相册文件数量若有变化,再次执行thread0
 //void picListShow::focusInEvent(QFocusEvent *event)
 //{
 //    bool ret = thread0.isRunning();
 //    if(!ret)
 //        thread0.start();
-//}
-
-//void picListShow::focusOutEvent(QFocusEvent *event)
-//{
-//    bool ret = thread0.isRunning();
-//    bool ret1=  thread0.isFinished();
-////    if(ret1)
-////        connect(&thread0, SIGNAL(finished()), &thread0, SLOT(deleteLater()));
-//}
-
-//double picListShow::moveLength() const
-//{
-//    return m_moveLength;
-//}
-
-//void picListShow::readImgCompleteSlot()
-//{
-
 //}
 
 singleImgShow::singleImgShow(QWidget *parent):
@@ -330,12 +265,11 @@ singleImgShow::singleImgShow(QWidget *parent):
     verticalOffset(0),
     rotationAngle(0),
     scaleFactor(1),
-    currentStepScaleFactor(1)
+    currentStepScaleFactor(1),
+    isFirstDouble(true),
+    position(0)
 {
     setGeometry(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    backgroundLabel = new QLabel(this);
-    backgroundLabel->setGeometry(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    backgroundLabel->setStyleSheet("background-color:white");
 
     QList<Qt::GestureType> gestures;
     gestures << Qt::PanGesture;
@@ -344,9 +278,6 @@ singleImgShow::singleImgShow(QWidget *parent):
     this->grabGestures(gestures);
 
     setAttribute(Qt::WA_AcceptTouchEvents);
-
-    QObject *obj = this->parent();
-    qDebug() << "singleImgShow.parent.name = " << obj->objectName() << endl;
 }
 
 singleImgShow::~singleImgShow()
@@ -369,7 +300,6 @@ void singleImgShow::focusInEvent(QFocusEvent *e)
 
 void singleImgShow::mousePressEvent(QMouseEvent *event)
 {
-    mousePress = true;
     m_mouseSrcPos = event->pos();
 }
 
@@ -379,7 +309,7 @@ void singleImgShow::mouseReleaseEvent(QMouseEvent *event)
     int xPos = m_mouseDstPos.x() - m_mouseSrcPos.x();
     int yPos = m_mouseDstPos.y() - m_mouseSrcPos.y();
 
-    if(!isZoomMode && files.count() > 0){//滑动
+    if(!isZoomMode && pixmapList.count() > 0){//滑动
         if (xPos > 60){  //60 是滑动阀值
             curIndex--;
         } else if (xPos < -60){
@@ -387,7 +317,7 @@ void singleImgShow::mouseReleaseEvent(QMouseEvent *event)
         }
 
         if(curIndex < 0){  curIndex = 0; }
-        if(curIndex > (files.count() - 1)){ curIndex = files.count() - 1; }
+        if(curIndex > (pixmapList.count() - 1)){ curIndex = pixmapList.count() - 1; }
         goToImage(curIndex);
     }else
     if(currentStepScaleFactor == 1){
@@ -468,9 +398,14 @@ void singleImgShow::keyReleaseEvent(QKeyEvent *event)
             curIndex ++;
             scaleFactor = 1;
         break;
-        case KEY_RETURN: //back to list
+        case KEY_RETURN: {//back to list
             this->hide();
+            AlbumWidget *pAlbum = AlbumWidget::getInstance(NULL);
+            pAlbum->pListShow->raise();
+            pAlbum->pListShow->setFocus();
+            pAlbum->pListShow->show();
             return;
+        }
         break;
         case KEY_ENLARGE:{
                 QSize screenSize(this->width(),this->height());
@@ -513,19 +448,19 @@ bool singleImgShow::gestureEvent(QGestureEvent *event)
 void singleImgShow::paintEvent(QPaintEvent *event)
 {
     qDebug() << __FUNCTION__ << endl;
-    QPainter p(this);
+    QPainter pPainter(this);
 
     const qreal iw = currentPixmap.width();
     const qreal ih = currentPixmap.height();
     const qreal wh = height();
     const qreal ww = width();
 
-    p.translate(ww/2, wh/2);
-    p.translate(-horizontalOffset, -verticalOffset);
-    p.rotate(rotationAngle);
-    p.scale(currentStepScaleFactor * scaleFactor, currentStepScaleFactor * scaleFactor);
-    p.translate(-iw/2, -ih/2);
-    p.drawPixmap(0, 0, currentPixmap);
+    pPainter.translate(ww/2, wh/2);
+    pPainter.translate(-horizontalOffset, -verticalOffset);
+    pPainter.rotate(rotationAngle);
+    pPainter.scale(currentStepScaleFactor * scaleFactor, currentStepScaleFactor * scaleFactor);
+    pPainter.translate(-iw/2, -ih/2);
+    pPainter.drawPixmap(0, 0, currentPixmap);
 }
 
 bool singleImgShow::backEvent()
@@ -533,35 +468,32 @@ bool singleImgShow::backEvent()
     this->hide();
 }
 
-void singleImgShow::setLabelMove(bool enable)
-{
-
-}
-
 void singleImgShow::goNextImage()
 {
-    if (files.isEmpty())
+    if (pixmapList.isEmpty())
         return;
 
-    if (position < files.size()-1) {
-        currentPixmap = pixmapList.at(++position);/*loadPixmap(ALBUM_PATH + files.at(++position));*/
+    if (position < pixmapList.size()-1) {
+        currentPixmap = pixmapList.at(++position);/*loadPixmap(ALBUM_PATH + pixmapList.at(++position));*/
     }
     update();
 }
 
 void singleImgShow::goPrevImage()
 {
-    if (files.isEmpty())
+    if (pixmapList.isEmpty())
         return;
 
     if (position > 0) {
-        currentPixmap = pixmapList.at(--position);/*loadPixmap(ALBUM_PATH + files.at(--position));*/
+        currentPixmap = pixmapList.at(--position);/*loadPixmap(ALBUM_PATH + pixmapList.at(--position));*/
     }
     update();
 }
 
 void singleImgShow::goToImage(int index)
 {
+//    backgroundLabel->hide();
+
     if (index == position+1) {
         currentPixmap = pixmapList.at(++position);
     }else
@@ -577,7 +509,34 @@ void singleImgShow::goToImage(int index)
 
 double singleImgShow::getScaleValue(QSize img, QSize view)
 {
+    double w = view.width() * 1.0;
+    double h = view.height()* 1.0;
+    double wi = img.width();
+    double hi = img.height();
 
+    double x = w / wi;
+    double y = h / hi;
+
+    if((wi <= w) && (hi <= h)){
+        if (x >= y)
+            return x;
+        else
+            return y;
+    }else
+        if((wi > w) && (hi <= h)){
+            //get: y > x
+            return y;
+        }else
+            if((wi <= w) && (hi >=h)){
+                //get: x > y
+                return x;
+            }else
+                if((wi >= w) && (hi >= h)){
+                    if(x > y)
+                        return 1/x;
+                    else
+                        return 1/y;
+                }
 }
 
 void singleImgShow::menuView()
