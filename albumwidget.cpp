@@ -17,6 +17,8 @@
 #include <qnamespace.h>
 #include <QObject>
 #include <assert.h>
+#include <future>
+#include <QPixmap>
 
 #define PICVIEWSIZE 77
 
@@ -106,8 +108,9 @@ void AlbumWidget::albumMenuSlot(int idx){
 
 void AlbumWidget::focusInEvent(QFocusEvent *){
     qDebug() << "AlbumWidget::" << __func__;
-    int ret = updateUI();
-    this->show();
+//        std::future<int> imgFuture = std::async(std::launch::async, &AlbumWidget::updateUI, this);
+//        imgFuture.wait();
+    updateUI();
 }
 
 void AlbumWidget::mousePressEvent(QMouseEvent *event)
@@ -200,11 +203,15 @@ int AlbumWidget::updateUI()
 
     // 创建单元项
     for (int i = 0; i < files.count(); ++i) {
-        QPixmap pixmap(ALBUM_PATH + files.at(i));
-        QListWidgetItem *listWidgetItem = new QListWidgetItem(QIcon(pixmap.scaled(IMAGE_SIZE)), NULL);  //delete name display
+        qDebug() << "files.at(0).name  = " << files.at(i) << endl;
+        img = new QImage(ALBUM_PATH + files.at(i));
+        pixmap = new QPixmap(QPixmap::fromImage(img->scaled(ITEM_SIZE, Qt::KeepAspectRatio)));
+        QListWidgetItem *listWidgetItem = new QListWidgetItem(QIcon(*pixmap), NULL);  //delete name display
         listWidgetItem->setSizeHint(ITEM_SIZE);
         pListShow->insertItem(i, listWidgetItem);
-        pSingleImgShow->pixmapList.append(pixmap.scaled(QSize(240, 320), Qt::KeepAspectRatio));
+        pSingleImgShow->pixmapList.append(QPixmap::fromImage(img->scaled(QSize(240, 320), Qt::KeepAspectRatio)));
+        delete pixmap;
+        delete img;
     }
     if(pListShow->count() > 0){
         pListShow->setCurrentRow(curIndex);//默认光标在第一个

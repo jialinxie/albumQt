@@ -21,7 +21,7 @@
 #define GET_POS_Y                  QCursor::pos().y();//event->globalX()//
 
 #ifdef QT_PC
-    #define ALBUM_PATH      "/Users/jack/Downloads/Camera/"
+    #define ALBUM_PATH      "../Camera/"
 #else
     #define ALBUM_PATH      "/launcher/BHC_USER/Camera/"
 #endif
@@ -98,6 +98,8 @@ private:
     QPoint m_mouseDstPos;   //滑动的终点
     int curIndex;
     int oldImageCount;
+    QPixmap *pixmap;
+    QImage *img;
 
     bool moveStatus(void);
     void setMoveStatus(void);
